@@ -342,11 +342,13 @@ class SettingsScreen extends ConsumerWidget {
 
                  Navigator.pop(context); // Close dialog
 
-                 // Optionally navigate to onboarding or home
-                  // Navigator.pushNamedAndRemoveUntil(context, '/onboarding', (route) => false);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Progress Reset Successfully'), backgroundColor: Colors.orange),
-                  );
+                 // Navigate back to onboarding screen after resetting
+                 Navigator.pushNamedAndRemoveUntil(context, '/onboarding', (route) => false);
+
+                 // Show snackbar confirmation (optional, could be shown on onboarding screen)
+                 ScaffoldMessenger.of(context).showSnackBar(
+                   const SnackBar(content: Text('Progress Reset Successfully'), backgroundColor: Colors.orange),
+                 );
               },
               style: TextButton.styleFrom(foregroundColor: Colors.red),
               child: const Text('Reset'),
