@@ -23,6 +23,7 @@ class UserProgress {
   final int streak;
   final int completedMissions; // Today's completed missions
   final int totalMissionsCompleted; // All-time completed missions
+  final DateTime? lastStreakUpdateDate; // Date when streak was last updated
 
   UserProgress({
     required this.xp,
@@ -31,6 +32,7 @@ class UserProgress {
     required this.streak,
     required this.completedMissions,
     required this.totalMissionsCompleted,
+    this.lastStreakUpdateDate,
   });
 
   UserProgress copyWith({
@@ -40,6 +42,7 @@ class UserProgress {
     int? streak,
     int? completedMissions,
     int? totalMissionsCompleted,
+    DateTime? lastStreakUpdateDate,
   }) {
     return UserProgress(
       xp: xp ?? this.xp,
@@ -47,7 +50,9 @@ class UserProgress {
       rank: rank ?? this.rank,
       streak: streak ?? this.streak,
       completedMissions: completedMissions ?? this.completedMissions,
-      totalMissionsCompleted: totalMissionsCompleted ?? this.totalMissionsCompleted,
+      totalMissionsCompleted:
+          totalMissionsCompleted ?? this.totalMissionsCompleted,
+      lastStreakUpdateDate: lastStreakUpdateDate ?? this.lastStreakUpdateDate,
     );
   }
 }
@@ -133,37 +138,37 @@ class ProgressService {
   static UserProgress addXp(UserProgress progress, int xpToAdd) {
     final newXp = progress.xp + xpToAdd;
     final currentRank = progress.rank;
-    
+
     // Check if rank should be updated
     NinjaRank newRank = currentRank;
     if (currentRank != NinjaRank.hokage && newXp >= currentRank.requiredXp) {
       newRank = currentRank.nextRank;
     }
-    
+
     // Calculate level (1 level per 100 XP)
     final newLevel = (newXp / 100).floor() + 1;
-    
+
     return progress.copyWith(
       xp: newXp,
       rank: newRank,
       level: newLevel,
     );
   }
-  
+
   // Update streak when all daily missions are completed
   static UserProgress updateStreak(UserProgress progress) {
     return progress.copyWith(
       streak: progress.streak + 1,
     );
   }
-  
+
   // Reset streak when a day is missed
   static UserProgress resetStreak(UserProgress progress) {
     return progress.copyWith(
       streak: 0,
     );
   }
-  
+
   // Mark a mission as completed
   static UserProgress completeMission(UserProgress progress) {
     return progress.copyWith(
@@ -171,7 +176,7 @@ class ProgressService {
       totalMissionsCompleted: progress.totalMissionsCompleted + 1,
     );
   }
-  
+
   // Reset daily completed missions count (called at the start of a new day)
   static UserProgress resetDailyMissions(UserProgress progress) {
     return progress.copyWith(

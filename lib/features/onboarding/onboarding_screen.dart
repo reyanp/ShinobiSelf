@@ -346,13 +346,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       character.traits.join(' • '),
                       style: isDarkMode
                           ? AppTextStyles.darkModeTextSecondary
-                          : AppTextStyles.bodySmall
-                              .copyWith(color: AppColors.textSecondary),
-                    ),
-                    Text(
-                      character.description,
-                      style: isDarkMode
-                          ? AppTextStyles.darkModeTextSecondary
                           : AppTextStyles.bodySmall,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,

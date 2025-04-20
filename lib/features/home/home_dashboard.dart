@@ -644,18 +644,37 @@ class HomeDashboard extends ConsumerWidget {
               .updateMissions(updatedMissions);
 
           // Check if all missions are completed to update streak
-          final allCompleted = updatedMissions.every((m) => m.isCompleted);
-          if (allCompleted) {
-            // Update streak in both providers (like origin/neal)
-            final currentStreak = ref.read(userStreakProvider);
-            ref.read(userStreakProvider.notifier).state = currentStreak + 1;
+          // Only consider the first 3 missions (the original daily ones)
+          // This ensures adding and completing AI missions doesn't artificially increase streak
+          final initialMissions = updatedMissions.length >= 3
+              ? updatedMissions.sublist(0, 3)
+              : updatedMissions;
+          final allInitialCompleted =
+              initialMissions.every((m) => m.isCompleted);
 
-            // Update streak in userProgressProvider
+          if (allInitialCompleted) {
+            // Only increment streak if it hasn't been incremented today already
             final currentProgress = ref.read(userProgressProvider);
-            ref.read(userProgressProvider.notifier).state =
-                currentProgress.copyWith(
-              streak: currentProgress.streak + 1,
-            );
+            final today = DateTime.now();
+            final lastStreakUpdate = currentProgress.lastStreakUpdateDate;
+
+            bool shouldIncrementStreak = lastStreakUpdate == null ||
+                (today.year != lastStreakUpdate.year ||
+                    today.month != lastStreakUpdate.month ||
+                    today.day != lastStreakUpdate.day);
+
+            if (shouldIncrementStreak) {
+              // Update streak in both providers
+              final currentStreak = ref.read(userStreakProvider);
+              ref.read(userStreakProvider.notifier).state = currentStreak + 1;
+
+              // Update streak in userProgressProvider
+              ref.read(userProgressProvider.notifier).state =
+                  currentProgress.copyWith(
+                streak: currentProgress.streak + 1,
+                lastStreakUpdateDate: today,
+              );
+            }
           }
         },
         orElse: () {
