@@ -90,14 +90,51 @@ class AppTextStyles {
 
   // Character path specific styles
   static TextStyle narutoStyle(TextStyle baseStyle) => baseStyle.copyWith(
-        color: AppColors.narutoPathColor,
+        color: AppColors.narutoOrange,
       );
 
   static TextStyle sasukeStyle(TextStyle baseStyle) => baseStyle.copyWith(
-        color: AppColors.sasukePathColor,
+        color: AppColors.sasukePurple,
       );
 
   static TextStyle sakuraStyle(TextStyle baseStyle) => baseStyle.copyWith(
-        color: AppColors.sakuraPathColor,
+        color: AppColors.sakuraPink,
       );
+
+  // Dark mode variants with improved visibility
+  // These should be used in dark mode contexts to ensure text is visible
+  static TextStyle darkModeTextSecondary = GoogleFonts.nunito(
+    fontSize: 14,
+    fontWeight: FontWeight.w500, // Slightly bolder for better visibility
+    color:
+        Colors.white, // Use pure white instead of opacity for better visibility
+  );
+
+  /// Converts a regular text style to a dark mode friendly version
+  static TextStyle toDarkMode(TextStyle style) {
+    final Color textColor = style.color ?? AppColors.textPrimary;
+
+    // If color is already bright (like primary colors), keep it
+    if (textColor == AppColors.chakraBlue ||
+        textColor == AppColors.narutoOrange ||
+        textColor == AppColors.sakuraPink ||
+        textColor == AppColors.sasukePurple ||
+        textColor == AppColors.leafGreen) {
+      return style;
+    }
+
+    // If it's a greyish color, make it white for dark mode
+    if (textColor == AppColors.textSecondary ||
+        textColor == AppColors.silverGray) {
+      return style.copyWith(
+        color: Colors.white, // Use pure white for maximum visibility
+        fontWeight: FontWeight.lerp(style.fontWeight, FontWeight.w500, 0.3),
+      );
+    }
+
+    // For other colors, ensure they're white in dark mode
+    return style.copyWith(
+      color: Colors.white,
+    );
+  }
 }

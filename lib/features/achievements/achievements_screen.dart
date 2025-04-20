@@ -6,7 +6,8 @@ import 'package:shinobi_self/models/achievement.dart';
 import 'package:shinobi_self/models/user_progress.dart';
 
 // Provider for achievements data
-final achievementsProvider = StateNotifierProvider<AchievementsNotifier, List<Achievement>>((ref) {
+final achievementsProvider =
+    StateNotifierProvider<AchievementsNotifier, List<Achievement>>((ref) {
   final userProgress = ref.watch(userProgressProvider);
   return AchievementsNotifier(userProgress);
 });
@@ -33,8 +34,8 @@ class AchievementsNotifier extends StateNotifier<List<Achievement>> {
           isUnlocked = userProgress.totalMissionsCompleted >= 1;
           break;
         case 'ten_missions':
-           isUnlocked = userProgress.totalMissionsCompleted >= 10;
-           break;
+          isUnlocked = userProgress.totalMissionsCompleted >= 10;
+          break;
         case 'three_day_streak':
           isUnlocked = userProgress.streak >= 3;
           break;
@@ -46,7 +47,7 @@ class AchievementsNotifier extends StateNotifier<List<Achievement>> {
 
   // Example method to potentially force-update if needed elsewhere
   void checkAchievements() {
-     _updateAchievementsStatus();
+    _updateAchievementsStatus();
   }
 
   static final List<Achievement> _initialAchievements = [
@@ -86,7 +87,7 @@ class AchievementsNotifier extends StateNotifier<List<Achievement>> {
       reward: '+50 Bonus XP',
       icon: Icons.directions_run,
     ),
-     Achievement(
+    Achievement(
       id: 'ten_missions',
       title: 'Mission Specialist',
       description: 'Complete 10 missions.',
@@ -106,11 +107,10 @@ class AchievementsNotifier extends StateNotifier<List<Achievement>> {
       description: 'Log your mood for 7 consecutive days.',
       reward: 'Zen Garden Theme',
       icon: Icons.sentiment_satisfied_alt,
-       isHidden: true,
+      isHidden: true,
     ),
   ];
 }
-
 
 class AchievementsScreen extends ConsumerWidget {
   const AchievementsScreen({Key? key}) : super(key: key);
@@ -122,7 +122,8 @@ class AchievementsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Achievements'),
-        automaticallyImplyLeading: false, // Remove back button if it's a main tab
+        automaticallyImplyLeading:
+            false, // Remove back button if it's a main tab
       ),
       body: ListView.builder(
         padding: const EdgeInsets.all(16.0),
@@ -141,101 +142,129 @@ class AchievementsScreen extends ConsumerWidget {
   }
 
   Widget _buildAchievementCard(Achievement achievement) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: achievement.isUnlocked ? 4 : 1,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: achievement.isUnlocked ? AppColors.hokageColor : AppColors.divider,
-          width: achievement.isUnlocked ? 2 : 1,
+    return Builder(builder: (context) {
+      final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+      return Card(
+        margin: const EdgeInsets.only(bottom: 16),
+        elevation: achievement.isUnlocked ? 4 : 1,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(
+            color: achievement.isUnlocked
+                ? AppColors.hokageColor
+                : AppColors.divider,
+            width: achievement.isUnlocked ? 2 : 1,
+          ),
         ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          children: [
-            Icon(
-              achievement.icon,
-              size: 40,
-              color: achievement.isUnlocked ? AppColors.chakraBlue : AppColors.textSecondary,
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    achievement.title,
-                    style: AppTextStyles.heading3.copyWith(
-                      color: achievement.isUnlocked ? AppColors.textPrimary : AppColors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    achievement.description,
-                    style: AppTextStyles.bodyMedium.copyWith(
-                       color: achievement.isUnlocked ? AppColors.textPrimary : AppColors.textSecondary,
-                    ),
-                  ),
-                   const SizedBox(height: 8),
-                   if (achievement.isUnlocked)
-                    Text(
-                      'Reward: ${achievement.reward}',
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.success,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                ],
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children: [
+              Icon(
+                achievement.icon,
+                size: 40,
+                color: achievement.isUnlocked
+                    ? AppColors.chakraBlue
+                    : (isDarkMode ? Colors.white70 : AppColors.textSecondary),
               ),
-            ),
-            if (achievement.isUnlocked)
-              const Icon(Icons.check_circle, color: AppColors.success, size: 24),
-          ],
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      achievement.title,
+                      style: isDarkMode && !achievement.isUnlocked
+                          ? AppTextStyles.toDarkMode(AppTextStyles.heading3)
+                          : AppTextStyles.heading3.copyWith(
+                              color: achievement.isUnlocked
+                                  ? AppColors.textPrimary
+                                  : AppColors.textSecondary,
+                            ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      achievement.description,
+                      style: isDarkMode && !achievement.isUnlocked
+                          ? AppTextStyles.toDarkMode(AppTextStyles.bodyMedium)
+                          : AppTextStyles.bodyMedium.copyWith(
+                              color: achievement.isUnlocked
+                                  ? AppColors.textPrimary
+                                  : AppColors.textSecondary,
+                            ),
+                    ),
+                    const SizedBox(height: 8),
+                    if (achievement.isUnlocked)
+                      Text(
+                        'Reward: ${achievement.reward}',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.success,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              if (achievement.isUnlocked)
+                const Icon(Icons.check_circle,
+                    color: AppColors.success, size: 24),
+            ],
+          ),
         ),
-      ),
-    );
+      );
+    });
   }
 
   Widget _buildLockedAchievementCard(Achievement achievement) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 1,
-      color: AppColors.silverGray.withOpacity(0.5),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-         side: const BorderSide(color: AppColors.divider),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          children: [
-            Icon(
-              Icons.question_mark_rounded,
-              size: 40,
-              color: AppColors.textSecondary,
-            ),
-            SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Hidden Achievement',
-                    style: AppTextStyles.heading3,
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Keep playing to unlock!',
-                    style: AppTextStyles.bodyMedium,
-                  ),
-                ],
-              ),
-            ),
-          ],
+    return Builder(builder: (context) {
+      final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+      return Card(
+        margin: const EdgeInsets.only(bottom: 16),
+        elevation: 1,
+        color: isDarkMode
+            ? Colors.grey[800]
+            : AppColors.silverGray.withOpacity(0.5),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(
+              color: isDarkMode ? Colors.grey[700]! : AppColors.divider),
         ),
-      ),
-    );
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children: [
+              Icon(
+                Icons.question_mark_rounded,
+                size: 40,
+                color: isDarkMode ? Colors.white70 : AppColors.textSecondary,
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Hidden Achievement',
+                      style: isDarkMode
+                          ? AppTextStyles.toDarkMode(AppTextStyles.heading3)
+                          : AppTextStyles.heading3,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Keep playing to unlock!',
+                      style: isDarkMode
+                          ? AppTextStyles.toDarkMode(AppTextStyles.bodyMedium)
+                          : AppTextStyles.bodyMedium,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    });
   }
-} 
+}

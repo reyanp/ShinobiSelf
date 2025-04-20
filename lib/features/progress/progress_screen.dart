@@ -5,6 +5,8 @@ import 'package:shinobi_self/core/theme/app_text_styles.dart';
 import 'package:shinobi_self/models/user_progress.dart';
 import 'package:shinobi_self/models/mission.dart';
 import 'package:shinobi_self/models/user_preferences.dart';
+import 'package:shinobi_self/models/character_path.dart';
+import 'package:shinobi_self/features/home/home_dashboard.dart';
 import 'package:intl/intl.dart';
 
 class ProgressScreen extends ConsumerWidget {
@@ -14,37 +16,45 @@ class ProgressScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final userProgress = ref.watch(userProgressProvider);
     final userPrefs = ref.watch(userPrefsProvider);
-    
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildRankCard(context, userProgress),
+          _buildRankCard(context, userProgress, userPrefs.characterPath),
           const SizedBox(height: 24),
-          _buildStatsCard(context, userProgress),
+          _buildStatsCard(context, ref, userProgress),
           const SizedBox(height: 24),
           _buildHistorySection(context, userProgress),
         ],
       ),
     );
   }
-  
-  Widget _buildRankCard(BuildContext context, UserProgress progress) {
+
+  Widget _buildRankCard(BuildContext context, UserProgress progress,
+      CharacterPath? characterPath) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final nextRank = progress.rank.nextRank;
     final nextRankXp = nextRank.requiredXp;
     final currentRankXp = progress.rank.requiredXp;
-    
+
+    // Get character info if available
+    final characterInfo =
+        characterPath != null ? CharacterInfo.characters[characterPath] : null;
+
     // Calculate progress percentage towards the next rank
     double progressToNextRank = 0.0;
     if (progress.rank != NinjaRank.hokage) {
-       final xpNeededForNextRank = nextRankXp - currentRankXp;
-       final xpEarnedInCurrentRank = progress.xp - currentRankXp;
-       if (xpNeededForNextRank > 0) { // Avoid division by zero
-           progressToNextRank = (xpEarnedInCurrentRank / xpNeededForNextRank).clamp(0.0, 1.0);
-       }
+      final xpNeededForNextRank = nextRankXp - currentRankXp;
+      final xpEarnedInCurrentRank = progress.xp - currentRankXp;
+      if (xpNeededForNextRank > 0) {
+        // Avoid division by zero
+        progressToNextRank =
+            (xpEarnedInCurrentRank / xpNeededForNextRank).clamp(0.0, 1.0);
+      }
     }
-    
+
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(
@@ -63,14 +73,34 @@ class ProgressScreen extends ConsumerWidget {
                     color: progress.rank.color.withOpacity(0.2),
                     shape: BoxShape.circle,
                   ),
-                  child: Center(
-                    child: Text(
-                      progress.rank.displayName[0],
-                      style: AppTextStyles.heading1.copyWith(
-                        color: progress.rank.color,
-                      ),
-                    ),
-                  ),
+                  child: characterInfo != null
+                      ? ClipOval(
+                          child: Image.asset(
+                            characterInfo.imagePath,
+                            width: 80,
+                            height: 80,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              // Fallback to rank letter if image fails to load
+                              return Center(
+                                child: Text(
+                                  progress.rank.displayName[0],
+                                  style: AppTextStyles.heading1.copyWith(
+                                    color: progress.rank.color,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        )
+                      : Center(
+                          child: Text(
+                            progress.rank.displayName[0],
+                            style: AppTextStyles.heading1.copyWith(
+                              color: progress.rank.color,
+                            ),
+                          ),
+                        ),
                 ),
                 const SizedBox(width: 20),
                 Expanded(
@@ -79,7 +109,9 @@ class ProgressScreen extends ConsumerWidget {
                     children: [
                       Text(
                         'Current Rank',
-                        style: AppTextStyles.bodySmall,
+                        style: isDarkMode
+                            ? AppTextStyles.toDarkMode(AppTextStyles.bodySmall)
+                            : AppTextStyles.bodySmall,
                       ),
                       Text(
                         progress.rank.displayName,
@@ -90,9 +122,12 @@ class ProgressScreen extends ConsumerWidget {
                       const SizedBox(height: 8),
                       Text(
                         'Level ${progress.level}',
-                        style: AppTextStyles.bodyLarge.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: isDarkMode
+                            ? AppTextStyles.toDarkMode(AppTextStyles.bodyLarge
+                                .copyWith(fontWeight: FontWeight.bold))
+                            : AppTextStyles.bodyLarge.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
                       ),
                     ],
                   ),
@@ -102,7 +137,9 @@ class ProgressScreen extends ConsumerWidget {
                   children: [
                     Text(
                       'Total XP',
-                      style: AppTextStyles.bodySmall,
+                      style: isDarkMode
+                          ? AppTextStyles.toDarkMode(AppTextStyles.bodySmall)
+                          : AppTextStyles.bodySmall,
                     ),
                     Text(
                       '${progress.xp} XP',
@@ -124,36 +161,50 @@ class ProgressScreen extends ConsumerWidget {
                     children: [
                       Text(
                         'Progress to ${nextRank.displayName}',
-                        style: AppTextStyles.bodyMedium,
+                        style: isDarkMode
+                            ? AppTextStyles.toDarkMode(AppTextStyles.bodyMedium)
+                            : AppTextStyles.bodyMedium,
                       ),
                       Text(
                         '${progress.xp} / ${nextRankXp} XP',
-                        style: AppTextStyles.bodySmall,
+                        style: isDarkMode
+                            ? AppTextStyles.toDarkMode(AppTextStyles.bodySmall)
+                            : AppTextStyles.bodySmall,
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
                   LinearProgressIndicator(
                     value: progressToNextRank,
-                    backgroundColor: AppColors.divider,
-                    valueColor: AlwaysStoppedAnimation<Color>(progress.rank.color),
+                    backgroundColor:
+                        isDarkMode ? Colors.grey[800] : AppColors.divider,
+                    valueColor:
+                        AlwaysStoppedAnimation<Color>(progress.rank.color),
                     minHeight: 10,
                     borderRadius: BorderRadius.circular(5),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Need ${nextRankXp - progress.xp} more XP to reach ${nextRank.displayName}',
-                    style: AppTextStyles.bodySmall,
+                    style: isDarkMode
+                        ? AppTextStyles.toDarkMode(AppTextStyles.bodySmall)
+                        : AppTextStyles.bodySmall,
                   ),
                 ],
               ),
             ] else ...[
               Text(
                 'Congratulations! You\'ve reached the highest rank of Hokage!',
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.hokageColor,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: isDarkMode
+                    ? AppTextStyles.toDarkMode(
+                        AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.hokageColor,
+                        fontWeight: FontWeight.bold,
+                      ))
+                    : AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.hokageColor,
+                        fontWeight: FontWeight.bold,
+                      ),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -162,8 +213,12 @@ class ProgressScreen extends ConsumerWidget {
       ),
     );
   }
-  
-  Widget _buildStatsCard(BuildContext context, UserProgress progress) {
+
+  Widget _buildStatsCard(
+      BuildContext context, WidgetRef ref, UserProgress progress) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final totalDailyMissions = ref.watch(dailyMissionsProvider).length;
+
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
@@ -176,25 +231,30 @@ class ProgressScreen extends ConsumerWidget {
           children: [
             Text(
               'Your Stats',
-              style: AppTextStyles.heading3,
+              style: isDarkMode
+                  ? AppTextStyles.toDarkMode(AppTextStyles.heading3)
+                  : AppTextStyles.heading3,
             ),
             const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _buildStatItem(
+                  context: context,
                   icon: Icons.local_fire_department,
                   color: AppColors.narutoOrange,
                   label: 'Current Streak',
                   value: '${progress.streak} days',
                 ),
                 _buildStatItem(
+                  context: context,
                   icon: Icons.check_circle,
                   color: AppColors.success,
                   label: 'Missions Today',
-                  value: '${progress.completedMissions}/3',
+                  value: '${progress.completedMissions}/${totalDailyMissions}',
                 ),
                 _buildStatItem(
+                  context: context,
                   icon: Icons.history,
                   color: AppColors.chakraBlue,
                   label: 'Total Missions',
@@ -207,13 +267,16 @@ class ProgressScreen extends ConsumerWidget {
       ),
     );
   }
-  
+
   Widget _buildStatItem({
+    required BuildContext context,
     required IconData icon,
     required Color color,
     required String label,
     required String value,
   }) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Column(
       children: [
         Icon(
@@ -224,20 +287,25 @@ class ProgressScreen extends ConsumerWidget {
         const SizedBox(height: 8),
         Text(
           value,
-          style: AppTextStyles.bodyLarge.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+          style: isDarkMode
+              ? AppTextStyles.toDarkMode(
+                  AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.bold))
+              : AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 4),
         Text(
           label,
-          style: AppTextStyles.bodySmall,
+          style: isDarkMode
+              ? AppTextStyles.toDarkMode(AppTextStyles.bodySmall)
+              : AppTextStyles.bodySmall,
         ),
       ],
     );
   }
-  
+
   Widget _buildHistorySection(BuildContext context, UserProgress progress) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     // In a real app, this would be loaded from a database
     final historyItems = [
       {
@@ -266,41 +334,46 @@ class ProgressScreen extends ConsumerWidget {
         'xp': 60,
       },
     ];
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Recent Activity',
-          style: AppTextStyles.heading2,
+          style: isDarkMode
+              ? AppTextStyles.toDarkMode(AppTextStyles.heading2)
+              : AppTextStyles.heading2,
         ),
         const SizedBox(height: 16),
-        ...historyItems.map((item) => _buildHistoryItem(
-          context,
-          date: item['date'] as DateTime,
-          event: item['event'] as String,
-          xp: item['xp'] as int,
-        )).toList(),
+        ...historyItems
+            .map((item) => _buildHistoryItem(
+                  context,
+                  date: item['date'] as DateTime,
+                  event: item['event'] as String,
+                  xp: item['xp'] as int,
+                ))
+            .toList(),
       ],
     );
   }
-  
+
   Widget _buildHistoryItem(
     BuildContext context, {
     required DateTime date,
     required String event,
     required int xp,
   }) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final dateFormat = DateFormat('MMM d');
     final formattedDate = dateFormat.format(date);
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
-            color: AppColors.divider,
+            color: isDarkMode ? Colors.white24 : AppColors.divider,
             width: 1,
           ),
         ),
@@ -311,16 +384,23 @@ class ProgressScreen extends ConsumerWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: AppColors.chakraBlue.withOpacity(0.1),
+              color: isDarkMode
+                  ? AppColors.chakraBlue.withOpacity(0.3)
+                  : AppColors.chakraBlue.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
             child: Center(
               child: Text(
                 formattedDate,
-                style: AppTextStyles.bodySmall.copyWith(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 10,
-                ),
+                style: isDarkMode
+                    ? AppTextStyles.toDarkMode(AppTextStyles.bodySmall.copyWith(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
+                      ))
+                    : AppTextStyles.bodySmall.copyWith(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
+                      ),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -329,7 +409,9 @@ class ProgressScreen extends ConsumerWidget {
           Expanded(
             child: Text(
               event,
-              style: AppTextStyles.bodyMedium,
+              style: isDarkMode
+                  ? AppTextStyles.toDarkMode(AppTextStyles.bodyMedium)
+                  : AppTextStyles.bodyMedium,
             ),
           ),
           if (xp > 0)

@@ -75,6 +75,8 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
     final question = _questions[_currentQuestionIndex];
     final options = _shuffledAnswers[_currentQuestionIndex];
     final progress = (_currentQuestionIndex + 1) / _questions.length;
+    // Check if we're in dark mode
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Padding(
       padding: const EdgeInsets.all(20.0),
@@ -89,13 +91,23 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
           const SizedBox(height: 24),
           Text(
             'Question ${_currentQuestionIndex + 1} of ${_questions.length}',
-            style: Theme.of(context).textTheme.labelSmall,
+            style: isDarkMode
+                ? AppTextStyles.toDarkMode(
+                    Theme.of(context).textTheme.labelSmall!)
+                : Theme.of(context).textTheme.labelSmall,
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
           Text(
             question.prompt,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+            style: isDarkMode
+                ? AppTextStyles.toDarkMode(
+                        Theme.of(context).textTheme.headlineSmall!)
+                    .copyWith(fontWeight: FontWeight.bold)
+                : Theme.of(context)
+                    .textTheme
+                    .headlineSmall
+                    ?.copyWith(fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
           ),
           // Optional: Display image if question.imageUrl is not null
@@ -113,9 +125,9 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                 return ElevatedButton(
                   onPressed: () => _answerQuestion(opt.path),
                   style: ElevatedButton.styleFrom(
-                     padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-                     textStyle: Theme.of(context).textTheme.titleMedium, 
-                     // Use default button styling or customize further
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 16, horizontal: 20),
+                    textStyle: Theme.of(context).textTheme.titleMedium,
                   ),
                   child: Text(opt.text, textAlign: TextAlign.center),
                 );
@@ -127,18 +139,26 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
     );
   }
 
- Widget _buildResultsScreen(BuildContext context) {
+  Widget _buildResultsScreen(BuildContext context) {
     // Get the notifier using ref.read since we are inside a ConsumerState
-    final userPrefsNotifier = ref.read(userPrefsProvider.notifier); 
+    final userPrefsNotifier = ref.read(userPrefsProvider.notifier);
     final recommendedPath = _calculateRecommendation();
     final pathInfo = CharacterInfo.characters[recommendedPath]!;
+    // Check if we're in dark mode
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     // Determine color based on path for visual flair
     Color pathColor;
     switch (recommendedPath) {
-      case CharacterPath.naruto: pathColor = AppColors.narutoPathColor; break;
-      case CharacterPath.sasuke: pathColor = AppColors.sasukePathColor; break;
-      case CharacterPath.sakura: pathColor = AppColors.sakuraPathColor; break;
+      case CharacterPath.naruto:
+        pathColor = AppColors.narutoPathColor;
+        break;
+      case CharacterPath.sasuke:
+        pathColor = AppColors.sasukePathColor;
+        break;
+      case CharacterPath.sakura:
+        pathColor = AppColors.sakuraPathColor;
+        break;
     }
 
     return Padding(
@@ -149,29 +169,42 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
         children: [
           Text(
             'Recommendation:',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.grey[600]),
+            style: isDarkMode
+                ? AppTextStyles.darkModeTextSecondary.copyWith(fontSize: 16)
+                : Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(color: Colors.grey[600]),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
-           Text(
+          Text(
             'The ${pathInfo.name} Path',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: pathColor, 
-            ),
+                  fontWeight: FontWeight.bold,
+                  color: pathColor,
+                ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 20),
           Text(
-            'Based on your answers, this path seems like a great fit for your personality and goals. ' 
+            'Based on your answers, this path seems like a great fit for your personality and goals. '
             '(${pathInfo.description})',
-            style: Theme.of(context).textTheme.bodyLarge,
+            style: isDarkMode
+                ? AppTextStyles.toDarkMode(
+                    Theme.of(context).textTheme.bodyLarge!)
+                : Theme.of(context).textTheme.bodyLarge,
             textAlign: TextAlign.center,
           ),
-           const SizedBox(height: 32),
-           Text(
+          const SizedBox(height: 32),
+          Text(
             'You can always change your path later in settings.',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+            style: isDarkMode
+                ? AppTextStyles.darkModeTextSecondary
+                : Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: Colors.grey),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 40),
@@ -183,14 +216,15 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
               // Complete onboarding with the recommended path
               userPrefsNotifier.completeOnboarding(recommendedPath);
               // Navigate to home screen, removing onboarding from stack
-              Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+              Navigator.pushNamedAndRemoveUntil(
+                  context, '/home', (route) => false);
             },
           ),
           const SizedBox(height: 12),
           OutlinedButton.icon(
-             icon: const Icon(Icons.list_alt),
-             label: const Text('Let me choose manually'),
-             onPressed: () {
+            icon: const Icon(Icons.list_alt),
+            label: const Text('Let me choose manually'),
+            onPressed: () {
               // Return null to indicate manual choice
               Navigator.pop(context, null);
             },
@@ -199,4 +233,4 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
       ),
     );
   }
-} 
+}

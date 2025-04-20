@@ -20,7 +20,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
   CharacterPath? _recommendedPath;
-  
+
   @override
   void dispose() {
     _pageController.dispose();
@@ -96,106 +96,155 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   Widget _buildWelcomePage() {
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const SizedBox(height: 40),
-          Text(
-            'Shinobi Self',
-            style: AppTextStyles.heading1.copyWith(
-              color: AppColors.chakraBlue,
-              fontSize: 32,
+    // Check if we're in dark mode
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final screenSize = MediaQuery.of(context).size;
+
+    return Stack(
+      children: [
+        // GIF Background
+        Positioned.fill(
+          child: Opacity(
+            opacity: 0.3, // Adjust opacity to make it a light background
+            child: Image.asset(
+              'assets/gifs/naruto-konoha.gif',
+              width: screenSize.width,
+              height: screenSize.height,
+              fit: BoxFit.cover,
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Train Like a Ninja, Grow Like a Hero',
-            style: AppTextStyles.heading3.copyWith(
-              color: AppColors.narutoOrange,
+        ),
+        // Content - Centered within the viewport
+        SingleChildScrollView(
+          child: Container(
+            // Set the height to match the viewport to allow centering
+            constraints: BoxConstraints(
+              minHeight:
+                  screenSize.height - 96, // Subtract navigation controls height
             ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 40),
-          Container(
-            height: 200,
-            width: 200,
-            decoration: BoxDecoration(
-              color: AppColors.silverGray.withOpacity(0.3),
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Icon(
-                Icons.self_improvement,
-                size: 120,
-                color: AppColors.chakraBlue,
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Shinobi Self',
+                    style: AppTextStyles.heading1.copyWith(
+                      color: AppColors.chakraBlue,
+                      fontSize: 32,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Train Like a Ninja, Grow Like a Hero',
+                    style: AppTextStyles.heading3.copyWith(
+                      color: AppColors.narutoOrange,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 40),
+                  Container(
+                    height: 200,
+                    width: 200,
+                    decoration: BoxDecoration(
+                      color: AppColors.silverGray.withOpacity(0.3),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Icon(
+                        Icons.self_improvement,
+                        size: 120,
+                        color: AppColors.chakraBlue,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+                  Text(
+                    'Welcome to your mental wellness journey inspired by the world of Naruto!',
+                    style: isDarkMode
+                        ? AppTextStyles.toDarkMode(AppTextStyles.bodyLarge)
+                        : AppTextStyles.bodyLarge,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Complete daily missions, track your progress, and level up from Genin to Hokage!',
+                    style: isDarkMode
+                        ? AppTextStyles.toDarkMode(AppTextStyles.bodyMedium)
+                        : AppTextStyles.bodyMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ),
             ),
           ),
-          const SizedBox(height: 40),
-          Text(
-            'Welcome to your mental wellness journey inspired by the world of Naruto!',
-            style: AppTextStyles.bodyLarge,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Complete daily missions, track your progress, and level up from Genin to Hokage!',
-            style: AppTextStyles.bodyMedium,
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
   Widget _buildPathSelectionPage() {
     final selectedPath = ref.watch(selectedCharacterProvider);
+    // Check if we're in dark mode
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text('Choose Your Path', style: AppTextStyles.heading2, textAlign: TextAlign.center),
-          const SizedBox(height: 12),
-          Text(
-            'Select a path that resonates with you, or take the quiz for a recommendation.',
-            textAlign: TextAlign.center,
-            style: AppTextStyles.bodyMedium,
-          ),
-          const SizedBox(height: 24),
-          OutlinedButton.icon(
-            icon: const Icon(Icons.psychology),
-            label: const Text('Find My Path (Quiz)'),
-            onPressed: _takeQuiz,
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 14),
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('Choose Your Path',
+                style: isDarkMode
+                    ? AppTextStyles.toDarkMode(AppTextStyles.heading2)
+                    : AppTextStyles.heading2,
+                textAlign: TextAlign.center),
+            const SizedBox(height: 12),
+            Text(
+              'Select a path that resonates with you, or take the quiz for a recommendation.',
+              textAlign: TextAlign.center,
+              style: isDarkMode
+                  ? AppTextStyles.toDarkMode(AppTextStyles.bodyMedium)
+                  : AppTextStyles.bodyMedium,
             ),
-          ),
-          const SizedBox(height: 20),
-          if (_recommendedPath != null && selectedPath == _recommendedPath)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12.0),
-              child: Text(
-                '✨ Recommended path selected! ✨',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold),
+            const SizedBox(height: 24),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.psychology),
+              label: const Text('Find My Path (Quiz)'),
+              onPressed: _takeQuiz,
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
               ),
             ),
-          ...CharacterPath.values.map((path) {
-            final character = CharacterInfo.characters[path]!;
-            final isSelected = selectedPath == path;
-            return _buildPathCard(character, path, isSelected);
-          }).toList(),
-        ],
+            const SizedBox(height: 20),
+            if (_recommendedPath != null && selectedPath == _recommendedPath)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12.0),
+                child: Text(
+                  '✨ Recommended path selected! ✨',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      color: Theme.of(context).primaryColor,
+                      fontWeight: FontWeight.bold),
+                ),
+              ),
+            ...CharacterPath.values.map((path) {
+              final character = CharacterInfo.characters[path]!;
+              final isSelected = selectedPath == path;
+              return _buildPathCard(character, path, isSelected);
+            }).toList(),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildPathCard(CharacterInfo character, CharacterPath path, bool isSelected) {
+  Widget _buildPathCard(
+      CharacterInfo character, CharacterPath path, bool isSelected) {
+    // Check if we're in dark mode
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Card(
       elevation: isSelected ? 4 : 1,
       margin: const EdgeInsets.symmetric(vertical: 8),
@@ -218,9 +267,23 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               CircleAvatar(
                 radius: 25,
                 backgroundColor: _getPathColor(path).withOpacity(0.1),
-                child: Text(
-                  character.name[0],
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: _getPathColor(path)),
+                child: ClipOval(
+                  child: Image.asset(
+                    character.imagePath,
+                    width: 50,
+                    height: 50,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      // Fallback to the first letter if image fails to load
+                      return Text(
+                        character.name[0],
+                        style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: _getPathColor(path)),
+                      );
+                    },
+                  ),
                 ),
               ),
               const SizedBox(width: 16),
@@ -230,22 +293,29 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   children: [
                     Text(
                       character.name,
-                      style: AppTextStyles.heading3.copyWith(color: _getPathColor(path)),
+                      style: AppTextStyles.heading3
+                          .copyWith(color: _getPathColor(path)),
                     ),
                     Text(
                       character.traits.join(' • '),
-                      style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+                      style: isDarkMode
+                          ? AppTextStyles.darkModeTextSecondary
+                          : AppTextStyles.bodySmall
+                              .copyWith(color: AppColors.textSecondary),
                     ),
                     Text(
                       character.description,
-                      style: AppTextStyles.bodySmall,
+                      style: isDarkMode
+                          ? AppTextStyles.darkModeTextSecondary
+                          : AppTextStyles.bodySmall,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
-              if (isSelected) Icon(Icons.check_circle, color: _getPathColor(path), size: 28),
+              if (isSelected)
+                Icon(Icons.check_circle, color: _getPathColor(path), size: 28),
             ],
           ),
         ),
@@ -255,45 +325,79 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   Widget _buildConfirmationPage() {
     final selectedPath = ref.watch(selectedCharacterProvider);
+    // Check if we're in dark mode
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     if (selectedPath == null) {
-      return const Center(child: Text('Please go back and select a path.'));
+      return Center(
+          child: Text(
+        'Please go back and select a path.',
+        style: isDarkMode
+            ? AppTextStyles.toDarkMode(AppTextStyles.bodyMedium)
+            : AppTextStyles.bodyMedium,
+      ));
     }
     final character = CharacterInfo.characters[selectedPath]!;
 
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text('Path Confirmed', style: AppTextStyles.heading2, textAlign: TextAlign.center),
-          const SizedBox(height: 20),
-          CircleAvatar(
-            radius: 50,
-            backgroundColor: _getPathColor(selectedPath).withOpacity(0.1),
-            child: Text(
-              character.name[0],
-              style: TextStyle(fontSize: 50, fontWeight: FontWeight.bold, color: _getPathColor(selectedPath)),
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('Path Confirmed',
+                style: isDarkMode
+                    ? AppTextStyles.toDarkMode(AppTextStyles.heading2)
+                    : AppTextStyles.heading2,
+                textAlign: TextAlign.center),
+            const SizedBox(height: 20),
+            CircleAvatar(
+              radius: 50,
+              backgroundColor: _getPathColor(selectedPath).withOpacity(0.1),
+              child: ClipOval(
+                child: Image.asset(
+                  character.imagePath,
+                  width: 100,
+                  height: 100,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    // Fallback to the first letter if image fails to load
+                    return Text(
+                      character.name[0],
+                      style: TextStyle(
+                          fontSize: 50,
+                          fontWeight: FontWeight.bold,
+                          color: _getPathColor(selectedPath)),
+                    );
+                  },
+                ),
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'You have chosen the path of ${character.name}!',
-            style: AppTextStyles.heading3.copyWith(color: _getPathColor(selectedPath)),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 12),
-          Text(
-            character.description,
-            textAlign: TextAlign.center,
-            style: AppTextStyles.bodyLarge,
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'Begin your training and unlock your potential.',
-            textAlign: TextAlign.center,
-            style: AppTextStyles.bodyMedium,
-          ),
-        ],
+            const SizedBox(height: 16),
+            Text(
+              'You have chosen the path of ${character.name}!',
+              style: AppTextStyles.heading3
+                  .copyWith(color: _getPathColor(selectedPath)),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              character.description,
+              textAlign: TextAlign.center,
+              style: isDarkMode
+                  ? AppTextStyles.toDarkMode(AppTextStyles.bodyLarge)
+                  : AppTextStyles.bodyLarge,
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Begin your training and unlock your potential.',
+              textAlign: TextAlign.center,
+              style: isDarkMode
+                  ? AppTextStyles.toDarkMode(AppTextStyles.bodyMedium)
+                  : AppTextStyles.bodyMedium,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -308,18 +412,25 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           if (_currentPage > 0)
-            TextButton(onPressed: () => _pageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut), child: const Text('Back'))
+            TextButton(
+                onPressed: () => _pageController.previousPage(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut),
+                child: const Text('Back'))
           else
             const SizedBox(width: 60),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(totalPages, (index) {
               return Container(
-                width: 10, height: 10,
+                width: 10,
+                height: 10,
                 margin: const EdgeInsets.symmetric(horizontal: 4),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: _currentPage == index ? Theme.of(context).primaryColor : AppColors.divider,
+                  color: _currentPage == index
+                      ? Theme.of(context).primaryColor
+                      : AppColors.divider,
                 ),
               );
             }),
