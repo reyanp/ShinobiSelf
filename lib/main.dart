@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shinobi_self/features/home/home_screen.dart';
 import 'package:shinobi_self/features/onboarding/onboarding_screen.dart';
 import 'package:shinobi_self/features/settings/settings_screen.dart';
+import 'package:shinobi_self/features/profile/profile_screen.dart'; // Import profile screen
 import 'package:shinobi_self/core/theme/app_theme.dart';
 import 'package:shinobi_self/models/user_preferences.dart';
 import 'package:shinobi_self/core/navigation/animated_tab_bar.dart';
@@ -44,6 +45,7 @@ class ShinobiSelfApp extends ConsumerWidget {
         '/onboarding': (context) => const OnboardingScreen(),
         '/home': (context) => const HomeScreen(),
         '/settings': (context) => const SettingsScreen(),
+        '/profile': (context) => const ProfileScreen(), // Add profile screen route
       },
     );
   }

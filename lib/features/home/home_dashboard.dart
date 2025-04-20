@@ -195,9 +195,10 @@ class HomeDashboard extends ConsumerWidget {
             const SizedBox(width: 8),
             Text(
               'Daily Missions',
-              style: isDarkMode
-                  ? AppTextStyles.toDarkMode(AppTextStyles.heading2)
-                  : AppTextStyles.heading2,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: isDarkMode ? Colors.white : AppColors.textPrimary,
+              ),
             ),
             missions.when(
               data: (data) => _buildTimeUntilReset(data.firstOrNull?.resetTime),
@@ -209,9 +210,9 @@ class HomeDashboard extends ConsumerWidget {
         const SizedBox(height: 8),
         Text(
           'Complete these missions to earn XP and level up',
-          style: isDarkMode
-              ? AppTextStyles.toDarkMode(AppTextStyles.bodySmall)
-              : AppTextStyles.bodySmall,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: isDarkMode ? Colors.white70 : AppColors.textSecondary,
+          ),
         ),
         const SizedBox(height: 16),
         missions.when(
@@ -220,9 +221,15 @@ class HomeDashboard extends ConsumerWidget {
               return const Center(child: Text('No missions available'));
             }
             return Column(
-              children: missionsList
-                  .map((mission) => _buildMissionCard(context, ref, mission))
-                  .toList(),
+              children: missionsList.asMap().entries.map((entry) {
+                // Add staggered animation delay based on index
+                final index = entry.key;
+                final mission = entry.value;
+                return AnimatedMissionCard(
+                  mission: mission,
+                  onComplete: (mission) => _completeMission(context, ref, mission),
+                );
+              }).toList(),
             );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
@@ -251,18 +258,19 @@ class HomeDashboard extends ConsumerWidget {
             const SizedBox(width: 8),
             Text(
               'Weekly Challenges',
-              style: isDarkMode
-                  ? AppTextStyles.toDarkMode(AppTextStyles.heading2)
-                  : AppTextStyles.heading2,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: isDarkMode ? Colors.white : AppColors.textPrimary,
+              ),
             ),
           ],
         ),
         const SizedBox(height: 8),
         Text(
           'More rewarding missions that reset weekly',
-          style: isDarkMode
-              ? AppTextStyles.toDarkMode(AppTextStyles.bodySmall)
-              : AppTextStyles.bodySmall,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: isDarkMode ? Colors.white70 : AppColors.textSecondary,
+          ),
         ),
         const SizedBox(height: 16),
         if (missions.isEmpty)
@@ -324,6 +332,8 @@ class HomeDashboard extends ConsumerWidget {
     WidgetRef ref, 
     Mission mission
   ) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(
@@ -340,11 +350,17 @@ class HomeDashboard extends ConsumerWidget {
                   child: Text(
                     mission.title,
                     style: mission.isCompleted
-                        ? AppTextStyles.questTitle.copyWith(
+                        ? TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
                             decoration: TextDecoration.lineThrough,
                             color: AppColors.textSecondary,
                           )
-                        : AppTextStyles.questTitle,
+                        : TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: isDarkMode ? Colors.white : AppColors.textPrimary,
+                          ),
                   ),
                 ),
                 Text(
@@ -357,11 +373,19 @@ class HomeDashboard extends ConsumerWidget {
             Text(
               mission.description,
               style: mission.isCompleted
-                  ? AppTextStyles.questDescription.copyWith(
+                  ? TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
                       decoration: TextDecoration.lineThrough,
                       color: AppColors.textSecondary,
+                      height: 1.4,
                     )
-                  : AppTextStyles.questDescription,
+                  : TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
+                      color: isDarkMode ? Colors.white70 : AppColors.textSecondary,
+                      height: 1.4,
+                    ),
             ),
             const SizedBox(height: 16),
             SizedBox(

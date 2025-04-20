@@ -60,6 +60,9 @@ class ReminderSetting {
 }
 
 
+// Enum for character evolution stages
+enum CharacterEvolution { kid, teen, adult }
+
 class UserPreferences {
   final CharacterPath? characterPath;
   final bool hasCompletedOnboarding;
@@ -67,7 +70,8 @@ class UserPreferences {
   final Color accentColor;
   final bool useAnimatedBackground;
   final SoundPack soundPack;
-  final List<ReminderSetting> reminders; // Placeholder for now
+  final List<ReminderSetting> reminders;
+  final CharacterEvolution selectedProfileImage; // New field for profile image selection
 
   const UserPreferences({
     this.characterPath,
@@ -77,6 +81,7 @@ class UserPreferences {
     this.useAnimatedBackground = true,
     this.soundPack = SoundPack.naruto, // Default sound pack
     this.reminders = const [],
+    this.selectedProfileImage = CharacterEvolution.kid, // Default to kid version
   });
 
   UserPreferences copyWith({
@@ -87,6 +92,7 @@ class UserPreferences {
     bool? useAnimatedBackground,
     SoundPack? soundPack,
     List<ReminderSetting>? reminders,
+    CharacterEvolution? selectedProfileImage,
     // Handle potential null characterPath if needed during copyWith
     bool clearCharacterPath = false,
   }) {
@@ -98,6 +104,7 @@ class UserPreferences {
       useAnimatedBackground: useAnimatedBackground ?? this.useAnimatedBackground,
       soundPack: soundPack ?? this.soundPack,
       reminders: reminders ?? this.reminders,
+      selectedProfileImage: selectedProfileImage ?? this.selectedProfileImage,
     );
   }
 }
@@ -120,6 +127,7 @@ class UserPreferencesNotifier extends StateNotifier<UserPreferences> {
   static const _onboardingKey = 'onboardingCompleted';
   static const _characterPathKey = 'characterPath';
   static const _remindersKey = 'remindersList'; // Key for reminders
+  static const _profileImageKey = 'profileImage'; // Key for profile image
 
   Future<void> _loadPreferences() async {
     final prefs = await SharedPreferences.getInstance();
@@ -129,6 +137,8 @@ class UserPreferencesNotifier extends StateNotifier<UserPreferences> {
     final soundPackIndex = prefs.getInt(_soundPackKey) ?? SoundPack.naruto.index;
     final onboardingCompleted = prefs.getBool(_onboardingKey) ?? false;
     final characterPathName = prefs.getString(_characterPathKey);
+    // Load profile image selection
+    final profileImageIndex = prefs.getInt(_profileImageKey) ?? CharacterEvolution.kid.index;
     // Load reminders
     final remindersJsonString = prefs.getString(_remindersKey);
     List<ReminderSetting> reminders = [];
@@ -153,6 +163,7 @@ class UserPreferencesNotifier extends StateNotifier<UserPreferences> {
           ? CharacterPath.values.firstWhere((e) => e.name == characterPathName)
           : null,
       reminders: reminders, // Assign loaded reminders
+      selectedProfileImage: CharacterEvolution.values[profileImageIndex],
     );
   }
 
@@ -168,6 +179,8 @@ class UserPreferencesNotifier extends StateNotifier<UserPreferences> {
     } else {
        await prefs.remove(_characterPathKey);
     }
+    // Save profile image selection
+    await prefs.setInt(_profileImageKey, state.selectedProfileImage.index);
     // Save reminders
     final remindersJsonString = jsonEncode(state.reminders.map((r) => r.toJson()).toList());
     await prefs.setString(_remindersKey, remindersJsonString);
@@ -197,6 +210,14 @@ class UserPreferencesNotifier extends StateNotifier<UserPreferences> {
   void updateSoundPack(SoundPack pack) {
      if (state.soundPack != pack) {
       state = state.copyWith(soundPack: pack);
+      _savePreferences();
+    }
+  }
+
+  // Update selected profile image
+  void updateProfileImage(CharacterEvolution evolution) {
+    if (state.selectedProfileImage != evolution) {
+      state = state.copyWith(selectedProfileImage: evolution);
       _savePreferences();
     }
   }

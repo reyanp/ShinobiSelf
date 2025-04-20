@@ -5,6 +5,7 @@ import 'package:shinobi_self/models/user_preferences.dart';
 import 'package:shinobi_self/core/theme/app_colors.dart';
 import 'package:shinobi_self/core/theme/app_text_styles.dart';
 import 'package:shinobi_self/features/quiz/quiz_screen.dart';
+import 'package:shinobi_self/features/home/home_dashboard.dart'; // For dailyMissionsProvider
 
 // Provider for storing the selected character path
 final selectedCharacterProvider = StateProvider<CharacterPath?>((ref) => null);
@@ -36,7 +37,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     } else {
       final selectedPath = ref.read(selectedCharacterProvider);
       if (selectedPath != null) {
+        // Complete onboarding and set character path
         ref.read(userPrefsProvider.notifier).completeOnboarding(selectedPath);
+        
+        // Invalidate the missions providers to force regeneration of missions
+        // This ensures new missions are generated after onboarding
+        ref.invalidate(dailyMissionsProvider);
+        
+        // Navigate to home screen
         Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -116,23 +124,26 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         ),
         // Content - Centered within the viewport
         SingleChildScrollView(
-          child: Container(
-            // Set the height to match the viewport to allow centering
-            constraints: BoxConstraints(
-              minHeight:
-                  screenSize.height - 96, // Subtract navigation controls height
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
+          child: Center(
+            child: Container(
+              // Set max width to ensure text doesn't stretch too wide in landscape
+              constraints: BoxConstraints(
+                minHeight: screenSize.height - 96, // Subtract navigation controls height
+                maxWidth: 600, // Limit width for better readability in landscape
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
                   Text(
                     'Shinobi Self',
                     style: AppTextStyles.heading1.copyWith(
                       color: AppColors.chakraBlue,
                       fontSize: 32,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -175,6 +186,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     textAlign: TextAlign.center,
                   ),
                 ],
+                ),
               ),
             ),
           ),

@@ -7,6 +7,7 @@ import 'package:shinobi_self/models/mission.dart';
 import 'package:shinobi_self/models/user_preferences.dart';
 import 'package:shinobi_self/models/character_path.dart';
 import 'package:shinobi_self/features/home/home_dashboard.dart';
+import 'package:shinobi_self/utils/character_evolution_helper.dart';
 import 'package:intl/intl.dart';
 
 class ProgressScreen extends ConsumerWidget {
@@ -22,7 +23,7 @@ class ProgressScreen extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildRankCard(context, userProgress, userPrefs.characterPath),
+          _buildRankCard(context, userProgress, userPrefs),
           const SizedBox(height: 24),
           _buildStatsCard(context, ref, userProgress),
           const SizedBox(height: 24),
@@ -33,7 +34,8 @@ class ProgressScreen extends ConsumerWidget {
   }
 
   Widget _buildRankCard(BuildContext context, UserProgress progress,
-      CharacterPath? characterPath) {
+      UserPreferences userPrefs) {
+    final characterPath = userPrefs.characterPath;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final nextRank = progress.rank.nextRank;
     final nextRankXp = nextRank.requiredXp;
@@ -76,7 +78,11 @@ class ProgressScreen extends ConsumerWidget {
                   child: characterInfo != null
                       ? ClipOval(
                           child: Image.asset(
-                            characterInfo.imagePath,
+                            // Use the selected profile image from user preferences
+                            CharacterEvolutionHelper.getCharacterImagePath(
+                              characterInfo.path,
+                              userPrefs.selectedProfileImage,
+                            ),
                             width: 80,
                             height: 80,
                             fit: BoxFit.cover,

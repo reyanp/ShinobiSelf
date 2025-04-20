@@ -1,0 +1,2 @@
+C:/DataFiles/Projects/hackai25/HackAI-2025/android/app/.cxx/Debug/3c285ws6/x86_64/CMakeFiles/edit_cache.dir
+C:/DataFiles/Projects/hackai25/HackAI-2025/android/app/.cxx/Debug/3c285ws6/x86_64/CMakeFiles/rebuild_cache.dir

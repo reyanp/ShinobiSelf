@@ -72,24 +72,32 @@ class SettingsScreen extends ConsumerWidget {
   // --- Appearance Settings ---
 
   Widget _buildThemeModeSetting(BuildContext context, ThemeMode currentMode, UserPreferencesNotifier notifier) {
-    return ListTile(
-      leading: const Icon(Icons.brightness_6),
-      title: const Text('App Theme'),
-      trailing: SegmentedButton<ThemeMode>(
-        segments: const [
-          ButtonSegment(value: ThemeMode.light, label: Text('Light'), icon: Icon(Icons.wb_sunny)),
-          ButtonSegment(value: ThemeMode.system, label: Text('System'), icon: Icon(Icons.brightness_auto)),
-          ButtonSegment(value: ThemeMode.dark, label: Text('Dark'), icon: Icon(Icons.nightlight_round)),
-        ],
-        selected: {currentMode},
-        onSelectionChanged: (Set<ThemeMode> newSelection) {
-          notifier.updateThemeMode(newSelection.first);
-        },
-        showSelectedIcon: false,
-        style: SegmentedButton.styleFrom(
-          visualDensity: VisualDensity.compact,
-        )
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ListTile(
+          leading: const Icon(Icons.brightness_6),
+          title: const Text('App Theme'),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(left: 16.0, right: 16.0, bottom: 8.0),
+          child: SegmentedButton<ThemeMode>(
+            segments: const [
+              ButtonSegment(value: ThemeMode.light, label: Text('Light'), icon: Icon(Icons.wb_sunny)),
+              ButtonSegment(value: ThemeMode.system, label: Text('System'), icon: Icon(Icons.brightness_auto)),
+              ButtonSegment(value: ThemeMode.dark, label: Text('Dark'), icon: Icon(Icons.nightlight_round)),
+            ],
+            selected: {currentMode},
+            onSelectionChanged: (Set<ThemeMode> newSelection) {
+              notifier.updateThemeMode(newSelection.first);
+            },
+            showSelectedIcon: false,
+            style: SegmentedButton.styleFrom(
+              visualDensity: VisualDensity.compact,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -319,7 +327,18 @@ class SettingsScreen extends ConsumerWidget {
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
             TextButton(
               onPressed: () {
+                 // Get current user preferences
+                 final currentPrefs = ref.read(userPrefsProvider);
+                 
                  // Reset UserPreferences (including character path and onboarding)
+                 // Also reset the selected profile image to kid version
+                 ref.read(userPrefsProvider.notifier).state = currentPrefs.copyWith(
+                   hasCompletedOnboarding: false,
+                   clearCharacterPath: true,
+                   selectedProfileImage: CharacterEvolution.kid, // Reset to kid version
+                 );
+                 
+                 // Call resetOnboarding to handle any other reset logic
                  ref.read(userPrefsProvider.notifier).resetOnboarding();
 
                  // Reset UserProgress to its initial state explicitly

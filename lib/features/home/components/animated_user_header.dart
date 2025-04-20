@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shinobi_self/core/animations/animation_helpers.dart';
 import 'package:shinobi_self/core/theme/app_colors.dart';
 import 'package:shinobi_self/core/theme/app_text_styles.dart';
 import 'package:shinobi_self/models/character_path.dart';
 import 'package:shinobi_self/models/user_progress.dart';
+import 'package:shinobi_self/models/user_preferences.dart';
+import 'package:shinobi_self/utils/character_evolution_helper.dart';
 
-class AnimatedUserHeader extends StatefulWidget {
+class AnimatedUserHeader extends ConsumerStatefulWidget {
   final CharacterInfo characterInfo;
   final int userXp;
   final int userStreak;
@@ -20,10 +23,10 @@ class AnimatedUserHeader extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<AnimatedUserHeader> createState() => _AnimatedUserHeaderState();
+  ConsumerState<AnimatedUserHeader> createState() => _AnimatedUserHeaderState();
 }
 
-class _AnimatedUserHeaderState extends State<AnimatedUserHeader>
+class _AnimatedUserHeaderState extends ConsumerState<AnimatedUserHeader>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
@@ -133,7 +136,11 @@ class _AnimatedUserHeaderState extends State<AnimatedUserHeader>
                             child: Center(
                               child: ClipOval(
                                 child: Image.asset(
-                                  widget.characterInfo.imagePath,
+                                  // Use the selected profile image from user preferences
+                                  CharacterEvolutionHelper.getCharacterImagePath(
+                                    widget.characterInfo.path,
+                                    ref.watch(userPrefsProvider).selectedProfileImage,
+                                  ),
                                   width: 60,
                                   height: 60,
                                   fit: BoxFit.cover,

@@ -25,7 +25,7 @@ class CharacterInfo {
       name: 'Naruto',
       description:
           'Follow the path of social confidence and positivity. Like Naruto, you\'ll build resilience and a positive outlook through daily social challenges.',
-      imagePath: 'assets/images/naruto.png',
+      imagePath: 'assets/images/naruto_teen.png',
       traits: [
         'Social Confidence',
         'Positivity',
@@ -38,7 +38,7 @@ class CharacterInfo {
       name: 'Sasuke',
       description:
           'Master discipline and focus on the Sasuke path. You\'ll develop mental strength and concentration through structured daily practices.',
-      imagePath: 'assets/images/sasuke.png',
+      imagePath: 'assets/images/sasuke_teen.png',
       traits: ['Discipline', 'Focus', 'Determination', 'Self-Control'],
     ),
     CharacterPath.sakura: CharacterInfo(
@@ -46,7 +46,7 @@ class CharacterInfo {
       name: 'Sakura',
       description:
           'Enhance emotional intelligence and self-reflection like Sakura. This path focuses on understanding emotions and building meaningful connections.',
-      imagePath: 'assets/images/sakura.png',
+      imagePath: 'assets/images/sakura_teen.png',
       traits: ['Emotional Intelligence', 'Reflection', 'Empathy', 'Growth'],
     ),
   };
