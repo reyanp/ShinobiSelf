@@ -11,12 +11,15 @@ import 'package:shinobi_self/features/achievements/achievements_screen.dart';
 import 'package:shinobi_self/widgets/mission_completion_overlay.dart';
 import 'package:shinobi_self/services/mission_generator_service.dart';
 import 'package:shinobi_self/services/openai_service.dart';
+import 'package:shinobi_self/services/sound_effects_service.dart';
 import 'package:shinobi_self/core/animations/animation_helpers.dart';
 import 'package:shinobi_self/features/home/components/mission_card.dart';
 import 'package:shinobi_self/features/home/components/animated_user_header.dart';
 
 // Provider for daily missions
-final dailyMissionsProvider = StateNotifierProvider<DailyMissionsNotifier, AsyncValue<List<Mission>>>((ref) {
+final dailyMissionsProvider =
+    StateNotifierProvider<DailyMissionsNotifier, AsyncValue<List<Mission>>>(
+        (ref) {
   return DailyMissionsNotifier(ref);
 });
 
@@ -80,7 +83,7 @@ final missionTimerProvider = StreamProvider<void>((ref) {
 
     // Check if any missions need to be reset
     bool needsWeeklyReset = weeklyMissions.any((m) => m.shouldReset);
-    
+
     // Handle daily missions reset if needed
     dailyMissionsAsync.maybeWhen(
       data: (missions) {
@@ -95,7 +98,7 @@ final missionTimerProvider = StreamProvider<void>((ref) {
       },
       orElse: () {}, // Do nothing for loading/error states
     );
-    
+
     if (needsWeeklyReset) {
       final characterPath =
           ref.read(userPrefsProvider.select((prefs) => prefs.characterPath));
@@ -176,10 +179,7 @@ class HomeDashboard extends ConsumerWidget {
   }
 
   Widget _buildDailyMissions(
-    BuildContext context, 
-    WidgetRef ref, 
-    AsyncValue<List<Mission>> missions
-  ) {
+      BuildContext context, WidgetRef ref, AsyncValue<List<Mission>> missions) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Column(
@@ -196,9 +196,9 @@ class HomeDashboard extends ConsumerWidget {
             Text(
               'Daily Missions',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: isDarkMode ? Colors.white : AppColors.textPrimary,
-              ),
+                    fontWeight: FontWeight.bold,
+                    color: isDarkMode ? Colors.white : AppColors.textPrimary,
+                  ),
             ),
             missions.when(
               data: (data) => _buildTimeUntilReset(data.firstOrNull?.resetTime),
@@ -211,8 +211,8 @@ class HomeDashboard extends ConsumerWidget {
         Text(
           'Complete these missions to earn XP and level up',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: isDarkMode ? Colors.white70 : AppColors.textSecondary,
-          ),
+                color: isDarkMode ? Colors.white70 : AppColors.textSecondary,
+              ),
         ),
         const SizedBox(height: 16),
         missions.when(
@@ -227,7 +227,8 @@ class HomeDashboard extends ConsumerWidget {
                 final mission = entry.value;
                 return AnimatedMissionCard(
                   mission: mission,
-                  onComplete: (mission) => _completeMission(context, ref, mission),
+                  onComplete: (mission) =>
+                      _completeMission(context, ref, mission),
                 );
               }).toList(),
             );
@@ -259,9 +260,9 @@ class HomeDashboard extends ConsumerWidget {
             Text(
               'Weekly Challenges',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: isDarkMode ? Colors.white : AppColors.textPrimary,
-              ),
+                    fontWeight: FontWeight.bold,
+                    color: isDarkMode ? Colors.white : AppColors.textPrimary,
+                  ),
             ),
           ],
         ),
@@ -269,8 +270,8 @@ class HomeDashboard extends ConsumerWidget {
         Text(
           'More rewarding missions that reset weekly',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: isDarkMode ? Colors.white70 : AppColors.textSecondary,
-          ),
+                color: isDarkMode ? Colors.white70 : AppColors.textSecondary,
+              ),
         ),
         const SizedBox(height: 16),
         if (missions.isEmpty)
@@ -326,14 +327,11 @@ class HomeDashboard extends ConsumerWidget {
       ],
     );
   }
-  
+
   Widget _buildMissionCard(
-    BuildContext context, 
-    WidgetRef ref, 
-    Mission mission
-  ) {
+      BuildContext context, WidgetRef ref, Mission mission) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(
@@ -359,7 +357,9 @@ class HomeDashboard extends ConsumerWidget {
                         : TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w600,
-                            color: isDarkMode ? Colors.white : AppColors.textPrimary,
+                            color: isDarkMode
+                                ? Colors.white
+                                : AppColors.textPrimary,
                           ),
                   ),
                 ),
@@ -383,7 +383,8 @@ class HomeDashboard extends ConsumerWidget {
                   : TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w400,
-                      color: isDarkMode ? Colors.white70 : AppColors.textSecondary,
+                      color:
+                          isDarkMode ? Colors.white70 : AppColors.textSecondary,
                       height: 1.4,
                     ),
             ),
@@ -411,7 +412,7 @@ class HomeDashboard extends ConsumerWidget {
       ),
     );
   }
-  
+
   Widget _buildMoodTracker(BuildContext context) {
     return Consumer(
       builder: (context, ref, child) {
@@ -600,10 +601,10 @@ class HomeDashboard extends ConsumerWidget {
           onSubmit: (imageFile, rating) {
             // Close the dialog and complete the mission with the image and rating
             Navigator.of(context).pop();
-            
+
             // Add bonus XP if an image was uploaded
             int bonusXp = imageFile != null ? 10 : 0;
-            
+
             _processMissionCompletion(context, ref, mission, bonusXp);
           },
         );
@@ -611,12 +612,19 @@ class HomeDashboard extends ConsumerWidget {
     );
   }
 
-  void _processMissionCompletion(BuildContext context, WidgetRef ref, Mission mission, int bonusXp) {
+  void _processMissionCompletion(
+      BuildContext context, WidgetRef ref, Mission mission, int bonusXp) async {
+    // Play completion sound based on character path
+    final userPrefs = ref.read(userPrefsProvider);
+    if (userPrefs.characterPath != null) {
+      await SoundEffectsService.playCompletionSound(userPrefs.characterPath!);
+    }
+
     // Update the mission to completed
     if (mission.frequency == MissionFrequency.daily) {
       // Get the current state of missions
       final dailyMissionsAsync = ref.read(dailyMissionsProvider);
-      
+
       // Only update if we have data (using maybeWhen from HEAD)
       dailyMissionsAsync.maybeWhen(
         data: (missions) {
@@ -629,14 +637,16 @@ class HomeDashboard extends ConsumerWidget {
             }
             return m;
           }).toList();
-          
+
           // Update missions list
-          ref.read(dailyMissionsProvider.notifier).updateMissions(updatedMissions);
-          
+          ref
+              .read(dailyMissionsProvider.notifier)
+              .updateMissions(updatedMissions);
+
           // Check if all missions are completed to update streak
           final allCompleted = updatedMissions.every((m) => m.isCompleted);
           if (allCompleted) {
-             // Update streak in both providers (like origin/neal)
+            // Update streak in both providers (like origin/neal)
             final currentStreak = ref.read(userStreakProvider);
             ref.read(userStreakProvider.notifier).state = currentStreak + 1;
 
@@ -669,7 +679,7 @@ class HomeDashboard extends ConsumerWidget {
       // Update weekly missions list
       ref.read(weeklyMissionsProvider.notifier).state = updatedMissions;
     }
-    
+
     // Update XP and progress - Include bonus XP (from HEAD)
     final currentXp = ref.read(userXpProvider);
     final newXp = currentXp + mission.xpReward + bonusXp;
@@ -681,22 +691,22 @@ class HomeDashboard extends ConsumerWidget {
       xp: newXp,
       level: _calculateLevel(newXp),
       rank: _calculateRank(newXp),
-      completedMissions: currentProgress.completedMissions + 1, // Assuming this counts per-session/day?
+      completedMissions: currentProgress.completedMissions + 1,
       totalMissionsCompleted: currentProgress.totalMissionsCompleted + 1,
-      // Streak is updated above if all daily missions are done
     );
 
     // Show bonus XP message if applicable (from HEAD)
     if (bonusXp > 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Mission completed! +${mission.xpReward} XP + $bonusXp bonus XP'),
+          content: Text(
+              'Mission completed! +${mission.xpReward} XP + $bonusXp bonus XP'),
           backgroundColor: Colors.green,
         ),
       );
     } else {
       // Optional: Show regular completion message?
-       ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Mission completed! +${mission.xpReward} XP'),
           backgroundColor: Colors.green,
@@ -772,7 +782,7 @@ class HomeDashboard extends ConsumerWidget {
         return AppColors.chakraBlue;
     }
   }
-  
+
   Widget _buildGenerateAIMissionButton(BuildContext context, WidgetRef ref) {
     return OutlinedButton.icon(
       icon: const Icon(Icons.smart_toy),
@@ -786,20 +796,21 @@ class HomeDashboard extends ConsumerWidget {
       ),
     );
   }
-  
+
   Future<void> _generateAIMission(BuildContext context, WidgetRef ref) async {
     // Check if API key is set in config
     final apiKey = OpenAIService.getApiKey();
     if (apiKey.isEmpty || apiKey == 'YOUR_OPENAI_API_KEY') {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please add your OpenAI API key in lib/config/api_keys.dart'),
+          content: Text(
+              'Please add your OpenAI API key in lib/config/api_keys.dart'),
           backgroundColor: Colors.red,
         ),
       );
       return;
     }
-    
+
     // Show loading dialog
     showDialog(
       context: context,
@@ -815,7 +826,7 @@ class HomeDashboard extends ConsumerWidget {
         ),
       ),
     );
-    
+
     try {
       // Get user's character path
       final userPrefs = ref.read(userPrefsProvider);
@@ -823,28 +834,30 @@ class HomeDashboard extends ConsumerWidget {
         Navigator.pop(context); // Close loading dialog
         return;
       }
-      
+
       // Generate AI mission
-      final mission = await MissionGeneratorService.generateAIMission(userPrefs.characterPath!);
-      
+      final mission = await MissionGeneratorService.generateAIMission(
+          userPrefs.characterPath!);
+
       // Close loading dialog
       Navigator.pop(context);
-      
+
       if (mission == null) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Failed to generate mission. Please try again later.'),
+              content:
+                  Text('Failed to generate mission. Please try again later.'),
               backgroundColor: Colors.red,
             ),
           );
         }
         return;
       }
-      
+
       // Add mission to daily missions
       ref.read(dailyMissionsProvider.notifier).addMission(mission);
-      
+
       // Show success message
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -11,6 +11,7 @@ import 'package:shinobi_self/features/home/home_dashboard.dart';
 import 'package:shinobi_self/features/progress/progress_screen.dart';
 import 'package:shinobi_self/features/mood/mood_tracker_screen.dart';
 import 'package:shinobi_self/features/achievements/achievements_screen.dart';
+import 'package:shinobi_self/services/sound_effects_service.dart';
 
 void main() {
   // Ensure widgets are initialized for shared_preferences
@@ -45,7 +46,8 @@ class ShinobiSelfApp extends ConsumerWidget {
         '/onboarding': (context) => const OnboardingScreen(),
         '/home': (context) => const HomeScreen(),
         '/settings': (context) => const SettingsScreen(),
-        '/profile': (context) => const ProfileScreen(), // Add profile screen route
+        '/profile': (context) =>
+            const ProfileScreen(), // Add profile screen route
       },
     );
   }
@@ -95,6 +97,7 @@ class _MainAppState extends ConsumerState<MainApp>
   @override
   void dispose() {
     _tabController.dispose();
+    SoundEffectsService.dispose();
     super.dispose();
   }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:shinobi_self/models/character_path.dart';
 import 'package:shinobi_self/models/user_preferences.dart';
 import 'package:shinobi_self/core/theme/app_colors.dart';
@@ -21,9 +22,40 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
   CharacterPath? _recommendedPath;
+  late final AudioPlayer _audioPlayer;
+  bool _isAudioInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _audioPlayer = AudioPlayer();
+    _initializeAudio();
+  }
+
+  Future<void> _initializeAudio() async {
+    try {
+      // Set volume first to avoid any sudden loud sounds
+      await _audioPlayer.setVolume(0.2);
+      // Set release mode before loading the source
+      await _audioPlayer.setReleaseMode(ReleaseMode.loop);
+      // Load the audio file
+      await _audioPlayer.setSource(AssetSource('sounds/konoha_theme.mp3'));
+      // Start playing
+      await _audioPlayer.resume();
+      setState(() {
+        _isAudioInitialized = true;
+      });
+    } catch (e) {
+      debugPrint('Error initializing audio: $e');
+    }
+  }
 
   @override
   void dispose() {
+    if (_isAudioInitialized) {
+      _audioPlayer.stop();
+    }
+    _audioPlayer.dispose();
     _pageController.dispose();
     super.dispose();
   }
@@ -39,11 +71,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       if (selectedPath != null) {
         // Complete onboarding and set character path
         ref.read(userPrefsProvider.notifier).completeOnboarding(selectedPath);
-        
+
         // Invalidate the missions providers to force regeneration of missions
         // This ensures new missions are generated after onboarding
         ref.invalidate(dailyMissionsProvider);
-        
+
         // Navigate to home screen
         Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
       } else {
@@ -128,8 +160,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             child: Container(
               // Set max width to ensure text doesn't stretch too wide in landscape
               constraints: BoxConstraints(
-                minHeight: screenSize.height - 96, // Subtract navigation controls height
-                maxWidth: 600, // Limit width for better readability in landscape
+                minHeight: screenSize.height -
+                    96, // Subtract navigation controls height
+                maxWidth:
+                    600, // Limit width for better readability in landscape
               ),
               child: Padding(
                 padding: const EdgeInsets.all(24.0),
@@ -137,55 +171,55 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                  Text(
-                    'Shinobi Self',
-                    style: AppTextStyles.heading1.copyWith(
-                      color: AppColors.chakraBlue,
-                      fontSize: 32,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Train Like a Ninja, Grow Like a Hero',
-                    style: AppTextStyles.heading3.copyWith(
-                      color: AppColors.narutoOrange,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 40),
-                  Container(
-                    height: 200,
-                    width: 200,
-                    decoration: BoxDecoration(
-                      color: AppColors.silverGray.withOpacity(0.3),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Icon(
-                        Icons.self_improvement,
-                        size: 120,
+                    Text(
+                      'Shinobi Self',
+                      style: AppTextStyles.heading1.copyWith(
                         color: AppColors.chakraBlue,
+                        fontSize: 32,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Train Like a Ninja, Grow Like a Hero',
+                      style: AppTextStyles.heading3.copyWith(
+                        color: AppColors.narutoOrange,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 40),
+                    Container(
+                      height: 200,
+                      width: 200,
+                      decoration: BoxDecoration(
+                        color: AppColors.silverGray.withOpacity(0.3),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Icon(
+                          Icons.self_improvement,
+                          size: 120,
+                          color: AppColors.chakraBlue,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 40),
-                  Text(
-                    'Welcome to your mental wellness journey inspired by the world of Naruto!',
-                    style: isDarkMode
-                        ? AppTextStyles.toDarkMode(AppTextStyles.bodyLarge)
-                        : AppTextStyles.bodyLarge,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Complete daily missions, track your progress, and level up from Genin to Hokage!',
-                    style: isDarkMode
-                        ? AppTextStyles.toDarkMode(AppTextStyles.bodyMedium)
-                        : AppTextStyles.bodyMedium,
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+                    const SizedBox(height: 40),
+                    Text(
+                      'Welcome to your mental wellness journey inspired by the world of Naruto!',
+                      style: isDarkMode
+                          ? AppTextStyles.toDarkMode(AppTextStyles.bodyLarge)
+                          : AppTextStyles.bodyLarge,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Complete daily missions, track your progress, and level up from Genin to Hokage!',
+                      style: isDarkMode
+                          ? AppTextStyles.toDarkMode(AppTextStyles.bodyMedium)
+                          : AppTextStyles.bodyMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ),
               ),
             ),
