@@ -8,15 +8,56 @@ import 'package:shinobi_self/models/user_preferences.dart';
 import 'package:shinobi_self/models/mood_entry.dart';
 import 'package:shinobi_self/models/user_progress.dart';
 import 'package:shinobi_self/features/achievements/achievements_screen.dart';
+import 'package:shinobi_self/widgets/mission_completion_overlay.dart';
+import 'package:shinobi_self/services/mission_generator_service.dart';
+import 'package:shinobi_self/services/openai_service.dart';
 
 // Provider for daily missions
-final dailyMissionsProvider = StateProvider<List<Mission>>((ref) {
-  final userPrefs = ref.watch(userPrefsProvider);
-  if (userPrefs.characterPath != null) {
-    return MissionData.getDailyMissions(userPrefs.characterPath!);
-  }
-  return [];
+final dailyMissionsProvider = StateNotifierProvider<DailyMissionsNotifier, AsyncValue<List<Mission>>>((ref) {
+  return DailyMissionsNotifier(ref);
 });
+
+class DailyMissionsNotifier extends StateNotifier<AsyncValue<List<Mission>>> {
+  final Ref _ref;
+
+  DailyMissionsNotifier(this._ref) : super(const AsyncValue.loading()) {
+    loadMissions();
+  }
+
+  Future<void> loadMissions() async {
+    try {
+      // Get user's character path
+      final userPrefs = _ref.read(userPrefsProvider);
+      if (userPrefs.characterPath == null) {
+        state = const AsyncValue.data([]);
+        return;
+      }
+
+      // Generate 3 AI missions
+      state = const AsyncValue.loading();
+      final missions = await MissionGeneratorService.generateInitialMissions(
+        userPrefs.characterPath!,
+        3, // Start with 3 missions
+      );
+
+      state = AsyncValue.data(missions);
+    } catch (e) {
+      print('Error loading AI missions: $e');
+      // Fallback to empty list if there's an error
+      state = const AsyncValue.data([]);
+    }
+  }
+
+  void addMission(Mission mission) {
+    state.whenData((missions) {
+      state = AsyncValue.data([...missions, mission]);
+    });
+  }
+
+  void updateMissions(List<Mission> newMissions) {
+    state = AsyncValue.data(newMissions);
+  }
+}
 
 // Provider for weekly missions
 final weeklyMissionsProvider = StateProvider<List<Mission>>((ref) {
@@ -30,20 +71,26 @@ final weeklyMissionsProvider = StateProvider<List<Mission>>((ref) {
 // Timer provider to check for mission resets
 final missionTimerProvider = StreamProvider<void>((ref) {
   return Stream.periodic(const Duration(minutes: 1), (count) {
-    final dailyMissions = ref.read(dailyMissionsProvider);
+    final dailyMissionsAsync = ref.read(dailyMissionsProvider);
     final weeklyMissions = ref.read(weeklyMissionsProvider);
     
     // Check if any missions need to be reset
-    bool needsDailyReset = dailyMissions.any((m) => m.shouldReset);
     bool needsWeeklyReset = weeklyMissions.any((m) => m.shouldReset);
     
-    if (needsDailyReset) {
-      final userPrefs = ref.read(userPrefsProvider);
-      if (userPrefs.characterPath != null) {
-        ref.read(dailyMissionsProvider.notifier).state = 
-          MissionData.getDailyMissions(userPrefs.characterPath!);
-      }
-    }
+    // Handle daily missions reset if needed
+    dailyMissionsAsync.maybeWhen(
+      data: (missions) {
+        bool needsDailyReset = missions.any((m) => m.shouldReset);
+        if (needsDailyReset) {
+          final userPrefs = ref.read(userPrefsProvider);
+          if (userPrefs.characterPath != null) {
+            // Reload AI missions when reset is needed
+            ref.read(dailyMissionsProvider.notifier).loadMissions();
+          }
+        }
+      },
+      orElse: () {}, // Do nothing for loading/error states
+    );
     
     if (needsWeeklyReset) {
       final userPrefs = ref.read(userPrefsProvider);
@@ -231,7 +278,7 @@ class HomeDashboard extends ConsumerWidget {
   Widget _buildDailyMissions(
     BuildContext context, 
     WidgetRef ref, 
-    List<Mission> missions
+    AsyncValue<List<Mission>> missions
   ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -243,7 +290,11 @@ class HomeDashboard extends ConsumerWidget {
               'Daily Missions',
               style: AppTextStyles.heading2,
             ),
-            _buildTimeUntilReset(missions.firstOrNull?.resetTime),
+            missions.when(
+              data: (data) => _buildTimeUntilReset(data.firstOrNull?.resetTime),
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+            ),
           ],
         ),
         const SizedBox(height: 8),
@@ -252,10 +303,22 @@ class HomeDashboard extends ConsumerWidget {
           style: AppTextStyles.bodyMedium,
         ),
         const SizedBox(height: 16),
-        if (missions.isEmpty)
-          const Center(child: CircularProgressIndicator())
-        else
-          ...missions.map((mission) => _buildMissionCard(context, ref, mission)).toList(),
+        missions.when(
+          data: (missionsList) {
+            if (missionsList.isEmpty) {
+              return const Center(child: Text('No missions available'));
+            }
+            return Column(
+              children: missionsList
+                  .map((mission) => _buildMissionCard(context, ref, mission))
+                  .toList(),
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (_, __) => const Center(child: Text('Error loading missions')),
+        ),
+        const SizedBox(height: 16),
+        _buildGenerateAIMissionButton(context, ref),
       ],
     );
   }
@@ -372,7 +435,7 @@ class HomeDashboard extends ConsumerWidget {
               child: ElevatedButton(
                 onPressed: mission.isCompleted
                     ? null
-                    : () => _completeMission(ref, mission),
+                    : () => _completeMission(context, ref, mission),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: mission.isCompleted
                       ? AppColors.silverGray
@@ -542,31 +605,69 @@ class HomeDashboard extends ConsumerWidget {
     );
   }
   
-  void _completeMission(WidgetRef ref, Mission mission) {
+  void _completeMission(BuildContext context, WidgetRef ref, Mission mission) {
+    // Show mission completion overlay
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return MissionCompletionOverlay(
+          missionTitle: mission.title,
+          onSkip: () {
+            // Just close the dialog and complete the mission
+            Navigator.of(context).pop();
+            _processMissionCompletion(context, ref, mission, 0); // No bonus XP
+          },
+          onSubmit: (imageFile, rating) {
+            // Close the dialog and complete the mission with the image and rating
+            Navigator.of(context).pop();
+            
+            // Add bonus XP if an image was uploaded
+            int bonusXp = imageFile != null ? 10 : 0;
+            
+            _processMissionCompletion(context, ref, mission, bonusXp);
+          },
+        );
+      },
+    );
+  }
+  
+  // Process the mission completion after the dialog is closed
+  void _processMissionCompletion(BuildContext context, WidgetRef ref, Mission mission, int bonusXp) {
     // Update the mission to completed
     if (mission.frequency == MissionFrequency.daily) {
-      final missions = ref.read(dailyMissionsProvider);
-      final updatedMissions = missions.map((m) {
-        if (m.id == mission.id) {
-          return m.copyWith(
-            isCompleted: true,
-            completedAt: DateTime.now(),
-          );
-        }
-        return m;
-      }).toList();
+      // Get the current state of missions
+      final dailyMissionsAsync = ref.read(dailyMissionsProvider);
       
-      // Update missions list
-      ref.read(dailyMissionsProvider.notifier).state = updatedMissions;
-      
-      // Check if all missions are completed to update streak
-      final allCompleted = updatedMissions.every((m) => m.isCompleted);
-      if (allCompleted) {
-        final currentStreak = ref.read(userStreakProvider);
-        ref.read(userStreakProvider.notifier).state = currentStreak + 1;
-      }
+      // Only update if we have data
+      dailyMissionsAsync.maybeWhen(
+        data: (missions) {
+          final updatedMissions = missions.map((m) {
+            if (m.id == mission.id) {
+              return m.copyWith(
+                isCompleted: true,
+                completedAt: DateTime.now(),
+              );
+            }
+            return m;
+          }).toList();
+          
+          // Update missions list
+          ref.read(dailyMissionsProvider.notifier).updateMissions(updatedMissions);
+          
+          // Check if all missions are completed to update streak
+          final allCompleted = updatedMissions.every((m) => m.isCompleted);
+          if (allCompleted) {
+            final currentStreak = ref.read(userStreakProvider);
+            ref.read(userStreakProvider.notifier).state = currentStreak + 1;
+          }
+        },
+        orElse: () {
+          // If there's no data, we can't update anything
+          print('Cannot complete mission: No mission data available');
+        },
+      );
     } else {
-      // Handle weekly missions
+      // Handle weekly missions (these use a simpler provider)
       final missions = ref.read(weeklyMissionsProvider);
       final updatedMissions = missions.map((m) {
         if (m.id == mission.id) {
@@ -582,9 +683,9 @@ class HomeDashboard extends ConsumerWidget {
       ref.read(weeklyMissionsProvider.notifier).state = updatedMissions;
     }
     
-    // Update XP and progress
+    // Update XP and progress - Include bonus XP if provided
     final currentXp = ref.read(userXpProvider);
-    final newXp = currentXp + mission.xpReward;
+    final newXp = currentXp + mission.xpReward + bonusXp;
     ref.read(userXpProvider.notifier).state = newXp;
     
     // Update user progress
@@ -596,6 +697,16 @@ class HomeDashboard extends ConsumerWidget {
       completedMissions: currentProgress.completedMissions + 1,
       totalMissionsCompleted: currentProgress.totalMissionsCompleted + 1,
     );
+
+    // Show bonus XP message if applicable
+    if (bonusXp > 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Mission completed! +${mission.xpReward} XP + $bonusXp bonus XP'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
 
     // Check achievements after updating progress
     ref.read(achievementsProvider.notifier).checkAchievements();
@@ -654,6 +765,101 @@ class HomeDashboard extends ConsumerWidget {
       case 'Jounin': return AppColors.jouninColor;
       case 'Hokage': return AppColors.hokageColor;
       default: return AppColors.chakraBlue;
+    }
+  }
+  
+  Widget _buildGenerateAIMissionButton(BuildContext context, WidgetRef ref) {
+    return OutlinedButton.icon(
+      icon: const Icon(Icons.smart_toy),
+      label: const Text('Generate AI Mission'),
+      onPressed: () => _generateAIMission(context, ref),
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    );
+  }
+  
+  Future<void> _generateAIMission(BuildContext context, WidgetRef ref) async {
+    // Check if API key is set in config
+    final apiKey = OpenAIService.getApiKey();
+    if (apiKey.isEmpty || apiKey == 'YOUR_OPENAI_API_KEY') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please add your OpenAI API key in lib/config/api_keys.dart'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Generating your personalized mission...'),
+          ],
+        ),
+      ),
+    );
+    
+    try {
+      // Get user's character path
+      final userPrefs = ref.read(userPrefsProvider);
+      if (userPrefs.characterPath == null) {
+        Navigator.pop(context); // Close loading dialog
+        return;
+      }
+      
+      // Generate AI mission
+      final mission = await MissionGeneratorService.generateAIMission(userPrefs.characterPath!);
+      
+      // Close loading dialog
+      Navigator.pop(context);
+      
+      if (mission == null) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to generate mission. Please try again later.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+      
+      // Add mission to daily missions
+      ref.read(dailyMissionsProvider.notifier).addMission(mission);
+      
+      // Show success message
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('New mission generated: ${mission.title}'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      // Close loading dialog if still showing
+      if (context.mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 }
