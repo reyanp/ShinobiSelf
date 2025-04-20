@@ -12,7 +12,8 @@ class MoodTrackerScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final moodEntries = ref.watch(moodEntriesProvider);
     final hasTodaysMood = ref.watch(hasTodaysMoodProvider);
-    
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -28,11 +29,12 @@ class MoodTrackerScreen extends ConsumerWidget {
       ),
     );
   }
-  
+
   Widget _buildMoodCheckIn(BuildContext context, WidgetRef ref) {
     final selectedMood = ref.watch(selectedMoodProvider);
     final moodNote = ref.watch(moodNoteProvider);
-    
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(
@@ -45,12 +47,16 @@ class MoodTrackerScreen extends ConsumerWidget {
           children: [
             Text(
               'How are you feeling today?',
-              style: AppTextStyles.heading2,
+              style: isDarkMode
+                  ? AppTextStyles.toDarkMode(AppTextStyles.heading2)
+                  : AppTextStyles.heading2,
             ),
             const SizedBox(height: 8),
             Text(
               'Your daily mood check-in helps track your emotional journey',
-              style: AppTextStyles.bodyMedium,
+              style: isDarkMode
+                  ? AppTextStyles.toDarkMode(AppTextStyles.bodyMedium)
+                  : AppTextStyles.bodyMedium,
             ),
             const SizedBox(height: 24),
             Row(
@@ -67,12 +73,13 @@ class MoodTrackerScreen extends ConsumerWidget {
                         width: 60,
                         height: 60,
                         decoration: BoxDecoration(
-                          color: isSelected 
-                              ? mood.color 
+                          color: isSelected
+                              ? mood.color
                               : mood.color.withOpacity(0.3),
                           shape: BoxShape.circle,
                           border: isSelected
-                              ? Border.all(color: AppColors.chakraBlue, width: 3)
+                              ? Border.all(
+                                  color: AppColors.chakraBlue, width: 3)
                               : null,
                         ),
                         child: Center(
@@ -85,10 +92,21 @@ class MoodTrackerScreen extends ConsumerWidget {
                       const SizedBox(height: 8),
                       Text(
                         mood.label,
-                        style: AppTextStyles.bodySmall.copyWith(
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                          color: isSelected ? AppColors.textPrimary : AppColors.textSecondary,
-                        ),
+                        style: isDarkMode
+                            ? AppTextStyles.toDarkMode(AppTextStyles.bodySmall)
+                                .copyWith(
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                              )
+                            : AppTextStyles.bodySmall.copyWith(
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                                color: isSelected
+                                    ? AppColors.textPrimary
+                                    : AppColors.textSecondary,
+                              ),
                       ),
                     ],
                   ),
@@ -103,10 +121,16 @@ class MoodTrackerScreen extends ConsumerWidget {
               maxLines: 3,
               decoration: InputDecoration(
                 hintText: 'Add a note about how you\'re feeling (optional)',
+                hintStyle: isDarkMode
+                    ? AppTextStyles.toDarkMode(AppTextStyles.bodySmall)
+                    : AppTextStyles.bodySmall,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
+              style: isDarkMode
+                  ? AppTextStyles.toDarkMode(AppTextStyles.bodyMedium)
+                  : AppTextStyles.bodyMedium,
             ),
             const SizedBox(height: 24),
             SizedBox(
@@ -129,28 +153,28 @@ class MoodTrackerScreen extends ConsumerWidget {
       ),
     );
   }
-  
+
   void _submitMoodEntry(BuildContext context, WidgetRef ref) {
     final selectedMood = ref.read(selectedMoodProvider);
     final moodNote = ref.read(moodNoteProvider);
-    
+
     if (selectedMood != null) {
       final newEntry = MoodEntry(
         date: DateTime.now(),
         mood: selectedMood,
         note: moodNote.isNotEmpty ? moodNote : null,
       );
-      
+
       final currentEntries = ref.read(moodEntriesProvider);
       ref.read(moodEntriesProvider.notifier).state = [
         newEntry,
         ...currentEntries,
       ];
-      
+
       // Reset providers
       ref.read(selectedMoodProvider.notifier).state = null;
       ref.read(moodNoteProvider.notifier).state = "";
-      
+
       // Show feedback
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -160,16 +184,16 @@ class MoodTrackerScreen extends ConsumerWidget {
       );
     }
   }
-  
+
   Widget _buildTodaysMoodSummary(BuildContext context, WidgetRef ref) {
     final moodEntries = ref.watch(moodEntriesProvider);
     final today = DateTime.now();
-    final todayEntry = moodEntries.firstWhere((entry) => 
-      entry.date.year == today.year && 
-      entry.date.month == today.month && 
-      entry.date.day == today.day
-    );
-    
+    final todayEntry = moodEntries.firstWhere((entry) =>
+        entry.date.year == today.year &&
+        entry.date.month == today.month &&
+        entry.date.day == today.day);
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(
@@ -203,30 +227,38 @@ class MoodTrackerScreen extends ConsumerWidget {
                     children: [
                       Text(
                         'Today\'s Mood',
-                        style: AppTextStyles.bodySmall,
+                        style: isDarkMode
+                            ? AppTextStyles.toDarkMode(AppTextStyles.bodySmall)
+                            : AppTextStyles.bodySmall,
                       ),
                       Text(
                         todayEntry.mood.label,
-                        style: AppTextStyles.heading3,
+                        style: isDarkMode
+                            ? AppTextStyles.toDarkMode(AppTextStyles.heading3)
+                            : AppTextStyles.heading3,
                       ),
                     ],
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.edit),
+                  icon:
+                      Icon(Icons.edit, color: isDarkMode ? Colors.white : null),
                   onPressed: () {
                     // Allow editing today's mood
                     final currentEntries = ref.read(moodEntriesProvider);
-                    ref.read(moodEntriesProvider.notifier).state = currentEntries
-                        .where((entry) => 
-                          entry.date.year != today.year || 
-                          entry.date.month != today.month || 
-                          entry.date.day != today.day
-                        ).toList();
-                    
+                    ref.read(moodEntriesProvider.notifier).state =
+                        currentEntries
+                            .where((entry) =>
+                                entry.date.year != today.year ||
+                                entry.date.month != today.month ||
+                                entry.date.day != today.day)
+                            .toList();
+
                     // Pre-fill the form
-                    ref.read(selectedMoodProvider.notifier).state = todayEntry.mood;
-                    ref.read(moodNoteProvider.notifier).state = todayEntry.note ?? "";
+                    ref.read(selectedMoodProvider.notifier).state =
+                        todayEntry.mood;
+                    ref.read(moodNoteProvider.notifier).state =
+                        todayEntry.note ?? "";
                   },
                 ),
               ],
@@ -235,14 +267,20 @@ class MoodTrackerScreen extends ConsumerWidget {
               const SizedBox(height: 16),
               Text(
                 'Your note:',
-                style: AppTextStyles.bodySmall.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: isDarkMode
+                    ? AppTextStyles.toDarkMode(AppTextStyles.bodySmall.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ))
+                    : AppTextStyles.bodySmall.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
               ),
               const SizedBox(height: 4),
               Text(
                 todayEntry.note!,
-                style: AppTextStyles.bodyMedium,
+                style: isDarkMode
+                    ? AppTextStyles.toDarkMode(AppTextStyles.bodyMedium)
+                    : AppTextStyles.bodyMedium,
               ),
             ],
             const SizedBox(height: 16),
@@ -257,14 +295,21 @@ class MoodTrackerScreen extends ConsumerWidget {
                 children: [
                   Text(
                     'Hokage Wisdom:',
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: isDarkMode
+                        ? AppTextStyles.toDarkMode(
+                            AppTextStyles.bodyMedium.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ))
+                        : AppTextStyles.bodyMedium.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     todayEntry.mood.narutoPhraseForMood,
-                    style: AppTextStyles.bodyMedium,
+                    style: isDarkMode
+                        ? AppTextStyles.toDarkMode(AppTextStyles.bodyMedium)
+                        : AppTextStyles.bodyMedium,
                   ),
                 ],
               ),
@@ -274,16 +319,19 @@ class MoodTrackerScreen extends ConsumerWidget {
       ),
     );
   }
-  
+
   Widget _buildMoodHistory(BuildContext context, List<MoodEntry> entries) {
     final dateFormat = DateFormat('MMM d');
-    
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Mood History',
-          style: AppTextStyles.heading2,
+          style: isDarkMode
+              ? AppTextStyles.toDarkMode(AppTextStyles.heading2)
+              : AppTextStyles.heading2,
         ),
         const SizedBox(height: 16),
         SizedBox(
@@ -315,14 +363,21 @@ class MoodTrackerScreen extends ConsumerWidget {
                     const SizedBox(height: 8),
                     Text(
                       dateFormat.format(entry.date),
-                      style: AppTextStyles.bodySmall,
+                      style: isDarkMode
+                          ? AppTextStyles.toDarkMode(AppTextStyles.bodySmall)
+                          : AppTextStyles.bodySmall,
                       textAlign: TextAlign.center,
                     ),
                     Text(
                       entry.mood.label,
-                      style: AppTextStyles.bodySmall.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: isDarkMode
+                          ? AppTextStyles.toDarkMode(
+                              AppTextStyles.bodySmall.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ))
+                          : AppTextStyles.bodySmall.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
                       textAlign: TextAlign.center,
                     ),
                   ],
@@ -334,18 +389,20 @@ class MoodTrackerScreen extends ConsumerWidget {
       ],
     );
   }
-  
+
   Widget _buildMoodInsights(BuildContext context, List<MoodEntry> entries) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     // Calculate mood distribution
     final moodCounts = <MoodType, int>{};
     for (final type in MoodType.values) {
       moodCounts[type] = 0;
     }
-    
+
     for (final entry in entries) {
       moodCounts[entry.mood] = (moodCounts[entry.mood] ?? 0) + 1;
     }
-    
+
     // Find most common mood
     MoodType? mostCommonMood;
     int maxCount = 0;
@@ -355,7 +412,7 @@ class MoodTrackerScreen extends ConsumerWidget {
         mostCommonMood = mood;
       }
     });
-    
+
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
@@ -368,7 +425,9 @@ class MoodTrackerScreen extends ConsumerWidget {
           children: [
             Text(
               'Mood Insights',
-              style: AppTextStyles.heading3,
+              style: isDarkMode
+                  ? AppTextStyles.toDarkMode(AppTextStyles.heading3)
+                  : AppTextStyles.heading3,
             ),
             const SizedBox(height: 16),
             Row(
@@ -392,7 +451,9 @@ class MoodTrackerScreen extends ConsumerWidget {
                   Expanded(
                     child: Text(
                       'Your most common mood is ${mostCommonMood!.label}',
-                      style: AppTextStyles.bodyMedium,
+                      style: isDarkMode
+                          ? AppTextStyles.toDarkMode(AppTextStyles.bodyMedium)
+                          : AppTextStyles.bodyMedium,
                     ),
                   ),
                 ],
@@ -401,16 +462,21 @@ class MoodTrackerScreen extends ConsumerWidget {
             const SizedBox(height: 16),
             Text(
               'Mood Distribution',
-              style: AppTextStyles.bodyMedium.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: isDarkMode
+                  ? AppTextStyles.toDarkMode(AppTextStyles.bodyMedium.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ))
+                  : AppTextStyles.bodyMedium.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
             ),
             const SizedBox(height: 8),
             Row(
               children: MoodType.values.map((mood) {
                 final count = moodCounts[mood] ?? 0;
-                final percentage = entries.isEmpty ? 0.0 : count / entries.length;
-                
+                final percentage =
+                    entries.isEmpty ? 0.0 : count / entries.length;
+
                 return Expanded(
                   flex: count == 0 ? 1 : (count * 10).round(),
                   child: Container(
@@ -433,7 +499,9 @@ class MoodTrackerScreen extends ConsumerWidget {
             const SizedBox(height: 16),
             Text(
               'Total entries: ${entries.length}',
-              style: AppTextStyles.bodySmall,
+              style: isDarkMode
+                  ? AppTextStyles.toDarkMode(AppTextStyles.bodySmall)
+                  : AppTextStyles.bodySmall,
             ),
           ],
         ),

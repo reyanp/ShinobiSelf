@@ -11,6 +11,9 @@ import 'package:shinobi_self/features/achievements/achievements_screen.dart';
 import 'package:shinobi_self/widgets/mission_completion_overlay.dart';
 import 'package:shinobi_self/services/mission_generator_service.dart';
 import 'package:shinobi_self/services/openai_service.dart';
+import 'package:shinobi_self/core/animations/animation_helpers.dart';
+import 'package:shinobi_self/features/home/components/mission_card.dart';
+import 'package:shinobi_self/features/home/components/animated_user_header.dart';
 
 // Provider for daily missions
 final dailyMissionsProvider = StateNotifierProvider<DailyMissionsNotifier, AsyncValue<List<Mission>>>((ref) {
@@ -61,9 +64,10 @@ class DailyMissionsNotifier extends StateNotifier<AsyncValue<List<Mission>>> {
 
 // Provider for weekly missions
 final weeklyMissionsProvider = StateProvider<List<Mission>>((ref) {
-  final userPrefs = ref.watch(userPrefsProvider);
-  if (userPrefs.characterPath != null) {
-    return MissionData.getWeeklyMissions(userPrefs.characterPath!);
+  final userPrefs =
+      ref.watch(userPrefsProvider.select((prefs) => prefs.characterPath));
+  if (userPrefs != null) {
+    return MissionData.getWeeklyMissions(userPrefs);
   }
   return [];
 });
@@ -73,7 +77,7 @@ final missionTimerProvider = StreamProvider<void>((ref) {
   return Stream.periodic(const Duration(minutes: 1), (count) {
     final dailyMissionsAsync = ref.read(dailyMissionsProvider);
     final weeklyMissions = ref.read(weeklyMissionsProvider);
-    
+
     // Check if any missions need to be reset
     bool needsWeeklyReset = weeklyMissions.any((m) => m.shouldReset);
     
@@ -93,10 +97,11 @@ final missionTimerProvider = StreamProvider<void>((ref) {
     );
     
     if (needsWeeklyReset) {
-      final userPrefs = ref.read(userPrefsProvider);
-      if (userPrefs.characterPath != null) {
-        ref.read(weeklyMissionsProvider.notifier).state = 
-          MissionData.getWeeklyMissions(userPrefs.characterPath!);
+      final characterPath =
+          ref.read(userPrefsProvider.select((prefs) => prefs.characterPath));
+      if (characterPath != null) {
+        ref.read(weeklyMissionsProvider.notifier).state =
+            MissionData.getWeeklyMissions(characterPath);
       }
     }
   });
@@ -121,13 +126,20 @@ class HomeDashboard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // Watch the timer to trigger mission resets
     ref.watch(missionTimerProvider);
-    
+
     final userPrefs = ref.watch(userPrefsProvider);
     final dailyMissions = ref.watch(dailyMissionsProvider);
     final weeklyMissions = ref.watch(weeklyMissionsProvider);
     final userXp = ref.watch(userXpProvider);
-    final userStreak = ref.watch(userStreakProvider);
-    
+    final userProgress = ref.watch(userProgressProvider);
+
+    // Sync userStreakProvider with userProgress.streak
+    final userStreak = userProgress.streak;
+    // Update the userStreakProvider to match the userProgressProvider streak value
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(userStreakProvider.notifier).state = userStreak;
+    });
+
     // For demo purposes, set a default character path if none is selected
     if (userPrefs.characterPath == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -138,15 +150,20 @@ class HomeDashboard extends ConsumerWidget {
       });
       return const Center(child: CircularProgressIndicator());
     }
-    
+
     final characterInfo = CharacterInfo.characters[userPrefs.characterPath]!;
-    
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildUserHeader(context, characterInfo, userXp, userStreak),
+          AnimatedUserHeader(
+            characterInfo: characterInfo,
+            userXp: userXp,
+            userStreak: userStreak,
+            userAccentColor: userPrefs.accentColor,
+          ),
           const SizedBox(height: 24),
           _buildDailyMissions(context, ref, dailyMissions),
           const SizedBox(height: 24),
@@ -157,138 +174,30 @@ class HomeDashboard extends ConsumerWidget {
       ),
     );
   }
-  
-  Widget _buildUserHeader(
-    BuildContext context, 
-    CharacterInfo characterInfo, 
-    int userXp, 
-    int userStreak
-  ) {
-    final ninjaRank = _getNinjaRank(userXp);
-    final nextRankXp = _getNextRankXp(userXp);
-    final progress = userXp / nextRankXp;
-    
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: _getPathColor(characterInfo.path).withOpacity(0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Text(
-                      characterInfo.name[0],
-                      style: AppTextStyles.heading1.copyWith(
-                        color: _getPathColor(characterInfo.path),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${characterInfo.name} Path',
-                        style: AppTextStyles.heading3.copyWith(
-                          color: _getPathColor(characterInfo.path),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Ninja Rank: $ninjaRank',
-                        style: AppTextStyles.ninjaRank.copyWith(
-                          color: _getRankColor(ninjaRank),
-                          fontSize: 16,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.local_fire_department, 
-                          color: AppColors.narutoOrange,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '$userStreak day streak',
-                          style: AppTextStyles.streakCounter,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '$userXp XP',
-                      style: AppTextStyles.xpCounter,
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Progress to ${_getNextRank(ninjaRank)}',
-                      style: AppTextStyles.bodySmall,
-                    ),
-                    Text(
-                      '$userXp / $nextRankXp XP',
-                      style: AppTextStyles.bodySmall,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                LinearProgressIndicator(
-                  value: progress,
-                  backgroundColor: AppColors.divider,
-                  valueColor: AlwaysStoppedAnimation<Color>(_getRankColor(ninjaRank)),
-                  minHeight: 8,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-  
+
   Widget _buildDailyMissions(
     BuildContext context, 
     WidgetRef ref, 
     AsyncValue<List<Mission>> missions
   ) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
+            const Icon(
+              Icons.task_alt,
+              color: AppColors.narutoOrange,
+              size: 28,
+            ),
+            const SizedBox(width: 8),
             Text(
               'Daily Missions',
-              style: AppTextStyles.heading2,
+              style: isDarkMode
+                  ? AppTextStyles.toDarkMode(AppTextStyles.heading2)
+                  : AppTextStyles.heading2,
             ),
             missions.when(
               data: (data) => _buildTimeUntilReset(data.firstOrNull?.resetTime),
@@ -300,7 +209,9 @@ class HomeDashboard extends ConsumerWidget {
         const SizedBox(height: 8),
         Text(
           'Complete these missions to earn XP and level up',
-          style: AppTextStyles.bodyMedium,
+          style: isDarkMode
+              ? AppTextStyles.toDarkMode(AppTextStyles.bodySmall)
+              : AppTextStyles.bodySmall,
         ),
         const SizedBox(height: 16),
         missions.when(
@@ -322,45 +233,70 @@ class HomeDashboard extends ConsumerWidget {
       ],
     );
   }
-  
+
   Widget _buildWeeklyMissions(
-    BuildContext context, 
-    WidgetRef ref, 
-    List<Mission> missions
-  ) {
+      BuildContext context, WidgetRef ref, List<Mission> missions) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'Weekly Missions',
-              style: AppTextStyles.heading2,
+            const Icon(
+              Icons.extension,
+              color: AppColors.chakraBlue,
+              size: 28,
             ),
-            _buildTimeUntilReset(missions.firstOrNull?.resetTime),
+            const SizedBox(width: 8),
+            Text(
+              'Weekly Challenges',
+              style: isDarkMode
+                  ? AppTextStyles.toDarkMode(AppTextStyles.heading2)
+                  : AppTextStyles.heading2,
+            ),
           ],
         ),
         const SizedBox(height: 8),
         Text(
-          'Bigger challenges for greater rewards',
-          style: AppTextStyles.bodyMedium,
+          'More rewarding missions that reset weekly',
+          style: isDarkMode
+              ? AppTextStyles.toDarkMode(AppTextStyles.bodySmall)
+              : AppTextStyles.bodySmall,
         ),
         const SizedBox(height: 16),
         if (missions.isEmpty)
-          const Center(child: CircularProgressIndicator())
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24.0),
+              child: Text(
+                'No weekly challenges available at the moment',
+                style: isDarkMode
+                    ? AppTextStyles.toDarkMode(AppTextStyles.bodyMedium)
+                    : AppTextStyles.bodyMedium,
+              ),
+            ),
+          )
         else
-          ...missions.map((mission) => _buildMissionCard(context, ref, mission)).toList(),
+          ...missions.asMap().entries.map((entry) {
+            // Add staggered animation delay based on index
+            final index = entry.key;
+            final mission = entry.value;
+            return AnimatedMissionCard(
+              mission: mission,
+              onComplete: (mission) => _completeMission(context, ref, mission),
+            );
+          }).toList(),
       ],
     );
   }
-  
+
   Widget _buildTimeUntilReset(DateTime? resetTime) {
     if (resetTime == null) return const SizedBox.shrink();
-    
+
     final now = DateTime.now();
     final difference = resetTime.difference(now);
-    
+
     String timeText;
     if (difference.inDays > 0) {
       timeText = '${difference.inDays}d ${difference.inHours % 24}h';
@@ -369,7 +305,7 @@ class HomeDashboard extends ConsumerWidget {
     } else {
       timeText = '${difference.inMinutes % 60}m';
     }
-    
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -377,9 +313,7 @@ class HomeDashboard extends ConsumerWidget {
         const SizedBox(width: 4),
         Text(
           'Resets in $timeText',
-          style: AppTextStyles.bodySmall.copyWith(
-            color: AppColors.textSecondary,
-          ),
+          style: AppTextStyles.toDarkMode(AppTextStyles.bodySmall),
         ),
       ],
     );
@@ -459,20 +393,26 @@ class HomeDashboard extends ConsumerWidget {
       builder: (context, ref, child) {
         final selectedMood = ref.watch(selectedMoodProvider);
         final hasMoodSubmittedToday = ref.watch(hasMoodSubmittedTodayProvider);
-        
+        final userAccentColor = ref.watch(userPrefsProvider).accentColor;
+        final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'Daily Mood Check-in',
-              style: AppTextStyles.heading2,
+              style: isDarkMode
+                  ? AppTextStyles.toDarkMode(AppTextStyles.heading2)
+                  : AppTextStyles.heading2,
             ),
             const SizedBox(height: 8),
             Text(
-              hasMoodSubmittedToday 
-                ? 'Thanks for checking in today!' 
-                : 'How are you feeling today?',
-              style: AppTextStyles.bodyMedium,
+              hasMoodSubmittedToday
+                  ? 'Thanks for checking in today!'
+                  : 'How are you feeling today?',
+              style: isDarkMode
+                  ? AppTextStyles.toDarkMode(AppTextStyles.bodyMedium)
+                  : AppTextStyles.bodyMedium,
             ),
             const SizedBox(height: 16),
             Card(
@@ -486,20 +426,25 @@ class HomeDashboard extends ConsumerWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        _buildMoodOption('😢', 'Sad', selectedMood, ref),
-                        _buildMoodOption('😐', 'Okay', selectedMood, ref),
-                        _buildMoodOption('🙂', 'Good', selectedMood, ref),
-                        _buildMoodOption('😄', 'Great', selectedMood, ref),
-                        _buildMoodOption('🤩', 'Amazing', selectedMood, ref),
+                        _buildMoodOption('😢', 'Sad', selectedMood, ref,
+                            userAccentColor, isDarkMode),
+                        _buildMoodOption('😐', 'Okay', selectedMood, ref,
+                            userAccentColor, isDarkMode),
+                        _buildMoodOption('🙂', 'Good', selectedMood, ref,
+                            userAccentColor, isDarkMode),
+                        _buildMoodOption('😄', 'Great', selectedMood, ref,
+                            userAccentColor, isDarkMode),
+                        _buildMoodOption('🤩', 'Amazing', selectedMood, ref,
+                            userAccentColor, isDarkMode),
                       ],
                     ),
                     const SizedBox(height: 16),
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: hasMoodSubmittedToday 
-                          ? null 
-                          : () => _submitMood(context, ref, selectedMood),
+                        onPressed: hasMoodSubmittedToday
+                            ? null
+                            : () => _submitMood(context, ref, selectedMood),
                         child: Text(
                           hasMoodSubmittedToday ? 'Submitted' : 'Submit Mood',
                           style: AppTextStyles.buttonMedium,
@@ -515,10 +460,11 @@ class HomeDashboard extends ConsumerWidget {
       },
     );
   }
-  
-  Widget _buildMoodOption(String emoji, String label, String? selectedMood, WidgetRef ref) {
+
+  Widget _buildMoodOption(String emoji, String label, String? selectedMood,
+      WidgetRef ref, Color accentColor, bool isDarkMode) {
     final isSelected = selectedMood == emoji;
-    
+
     return GestureDetector(
       onTap: () {
         ref.read(selectedMoodProvider.notifier).state = emoji;
@@ -528,7 +474,9 @@ class HomeDashboard extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: isSelected ? AppColors.chakraBlue.withOpacity(0.2) : Colors.transparent,
+              color: isSelected
+                  ? accentColor.withOpacity(0.2) // Use user accent color
+                  : Colors.transparent,
               shape: BoxShape.circle,
             ),
             child: Text(
@@ -539,10 +487,15 @@ class HomeDashboard extends ConsumerWidget {
           const SizedBox(height: 4),
           Text(
             label,
-            style: AppTextStyles.bodySmall.copyWith(
-              color: isSelected ? AppColors.chakraBlue : null,
-              fontWeight: isSelected ? FontWeight.bold : null,
-            ),
+            style: isDarkMode
+                ? AppTextStyles.toDarkMode(AppTextStyles.bodySmall).copyWith(
+                    color: isSelected ? accentColor : null,
+                    fontWeight: isSelected ? FontWeight.bold : null,
+                  )
+                : AppTextStyles.bodySmall.copyWith(
+                    color: isSelected ? accentColor : null,
+                    fontWeight: isSelected ? FontWeight.bold : null,
+                  ),
           ),
         ],
       ),
@@ -565,15 +518,18 @@ class HomeDashboard extends ConsumerWidget {
       (type) => type.emoji == selectedMood,
       orElse: () => MoodType.okay,
     );
-    
+
     final newEntry = MoodEntry(
       date: DateTime.now(),
       mood: moodType,
     );
-    
+
     // Add to mood entries
     final currentEntries = ref.read(moodEntriesProvider);
-    ref.read(moodEntriesProvider.notifier).state = [newEntry, ...currentEntries];
+    ref.read(moodEntriesProvider.notifier).state = [
+      newEntry,
+      ...currentEntries
+    ];
 
     // Update submission status
     ref.read(hasMoodSubmittedTodayProvider.notifier).state = true;
@@ -583,7 +539,7 @@ class HomeDashboard extends ConsumerWidget {
     final moodXpReward = 20; // XP reward for tracking mood
     final newXp = currentXp + moodXpReward;
     ref.read(userXpProvider.notifier).state = newXp;
-    
+
     // Update user progress
     final currentProgress = ref.read(userProgressProvider);
     ref.read(userProgressProvider.notifier).state = currentProgress.copyWith(
@@ -604,7 +560,7 @@ class HomeDashboard extends ConsumerWidget {
       ),
     );
   }
-  
+
   void _completeMission(BuildContext context, WidgetRef ref, Mission mission) {
     // Show mission completion overlay
     showDialog(
@@ -630,15 +586,14 @@ class HomeDashboard extends ConsumerWidget {
       },
     );
   }
-  
-  // Process the mission completion after the dialog is closed
+
   void _processMissionCompletion(BuildContext context, WidgetRef ref, Mission mission, int bonusXp) {
     // Update the mission to completed
     if (mission.frequency == MissionFrequency.daily) {
       // Get the current state of missions
       final dailyMissionsAsync = ref.read(dailyMissionsProvider);
       
-      // Only update if we have data
+      // Only update if we have data (using maybeWhen from HEAD)
       dailyMissionsAsync.maybeWhen(
         data: (missions) {
           final updatedMissions = missions.map((m) {
@@ -657,8 +612,16 @@ class HomeDashboard extends ConsumerWidget {
           // Check if all missions are completed to update streak
           final allCompleted = updatedMissions.every((m) => m.isCompleted);
           if (allCompleted) {
+             // Update streak in both providers (like origin/neal)
             final currentStreak = ref.read(userStreakProvider);
             ref.read(userStreakProvider.notifier).state = currentStreak + 1;
+
+            // Update streak in userProgressProvider
+            final currentProgress = ref.read(userProgressProvider);
+            ref.read(userProgressProvider.notifier).state =
+                currentProgress.copyWith(
+              streak: currentProgress.streak + 1,
+            );
           }
         },
         orElse: () {
@@ -667,7 +630,7 @@ class HomeDashboard extends ConsumerWidget {
         },
       );
     } else {
-      // Handle weekly missions (these use a simpler provider)
+      // Handle weekly missions (logic from origin/neal)
       final missions = ref.read(weeklyMissionsProvider);
       final updatedMissions = missions.map((m) {
         if (m.id == mission.id) {
@@ -678,31 +641,40 @@ class HomeDashboard extends ConsumerWidget {
         }
         return m;
       }).toList();
-      
+
       // Update weekly missions list
       ref.read(weeklyMissionsProvider.notifier).state = updatedMissions;
     }
     
-    // Update XP and progress - Include bonus XP if provided
+    // Update XP and progress - Include bonus XP (from HEAD)
     final currentXp = ref.read(userXpProvider);
     final newXp = currentXp + mission.xpReward + bonusXp;
     ref.read(userXpProvider.notifier).state = newXp;
-    
-    // Update user progress
+
+    // Update user progress (ensure all relevant fields are updated)
     final currentProgress = ref.read(userProgressProvider);
     ref.read(userProgressProvider.notifier).state = currentProgress.copyWith(
       xp: newXp,
       level: _calculateLevel(newXp),
       rank: _calculateRank(newXp),
-      completedMissions: currentProgress.completedMissions + 1,
+      completedMissions: currentProgress.completedMissions + 1, // Assuming this counts per-session/day?
       totalMissionsCompleted: currentProgress.totalMissionsCompleted + 1,
+      // Streak is updated above if all daily missions are done
     );
 
-    // Show bonus XP message if applicable
+    // Show bonus XP message if applicable (from HEAD)
     if (bonusXp > 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Mission completed! +${mission.xpReward} XP + $bonusXp bonus XP'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } else {
+      // Optional: Show regular completion message?
+       ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Mission completed! +${mission.xpReward} XP'),
           backgroundColor: Colors.green,
         ),
       );
@@ -711,7 +683,7 @@ class HomeDashboard extends ConsumerWidget {
     // Check achievements after updating progress
     ref.read(achievementsProvider.notifier).checkAchievements();
   }
-  
+
   int _calculateLevel(int xp) {
     // Every 100 XP is a new level
     return (xp / 100).floor() + 1;
@@ -723,30 +695,34 @@ class HomeDashboard extends ConsumerWidget {
     if (xp >= 500) return NinjaRank.chunin;
     return NinjaRank.genin;
   }
-  
+
   String _getNinjaRank(int xp) {
     if (xp >= 2000) return 'Hokage';
     if (xp >= 1000) return 'Jounin';
     if (xp >= 500) return 'Chunin';
     return 'Genin';
   }
-  
+
   String _getNextRank(String currentRank) {
     switch (currentRank) {
-      case 'Genin': return 'Chunin';
-      case 'Chunin': return 'Jounin';
-      case 'Jounin': return 'Hokage';
-      default: return 'Hokage';
+      case 'Genin':
+        return 'Chunin';
+      case 'Chunin':
+        return 'Jounin';
+      case 'Jounin':
+        return 'Hokage';
+      default:
+        return 'Hokage';
     }
   }
-  
+
   int _getNextRankXp(int currentXp) {
     if (currentXp < 500) return 500;
     if (currentXp < 1000) return 1000;
     if (currentXp < 2000) return 2000;
     return 3000; // Beyond Hokage
   }
-  
+
   Color _getPathColor(CharacterPath path) {
     switch (path) {
       case CharacterPath.naruto:
@@ -757,14 +733,19 @@ class HomeDashboard extends ConsumerWidget {
         return AppColors.sakuraPathColor;
     }
   }
-  
+
   Color _getRankColor(String rank) {
     switch (rank) {
-      case 'Genin': return AppColors.geninColor;
-      case 'Chunin': return AppColors.chuninColor;
-      case 'Jounin': return AppColors.jouninColor;
-      case 'Hokage': return AppColors.hokageColor;
-      default: return AppColors.chakraBlue;
+      case 'Genin':
+        return AppColors.geninColor;
+      case 'Chunin':
+        return AppColors.chuninColor;
+      case 'Jounin':
+        return AppColors.jouninColor;
+      case 'Hokage':
+        return AppColors.hokageColor;
+      default:
+        return AppColors.chakraBlue;
     }
   }
   
