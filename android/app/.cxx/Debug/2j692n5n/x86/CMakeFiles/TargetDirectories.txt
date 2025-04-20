@@ -1,0 +1,2 @@
+/home/reyan/Downloads/Hackai2025/shinobi_self/android/app/.cxx/Debug/2j692n5n/x86/CMakeFiles/edit_cache.dir
+/home/reyan/Downloads/Hackai2025/shinobi_self/android/app/.cxx/Debug/2j692n5n/x86/CMakeFiles/rebuild_cache.dir

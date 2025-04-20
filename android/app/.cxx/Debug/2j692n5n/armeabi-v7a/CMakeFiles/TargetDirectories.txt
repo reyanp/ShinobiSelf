@@ -1,0 +1,2 @@
+/home/reyan/Downloads/Hackai2025/shinobi_self/android/app/.cxx/Debug/2j692n5n/armeabi-v7a/CMakeFiles/edit_cache.dir
+/home/reyan/Downloads/Hackai2025/shinobi_self/android/app/.cxx/Debug/2j692n5n/armeabi-v7a/CMakeFiles/rebuild_cache.dir

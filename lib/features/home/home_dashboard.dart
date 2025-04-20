@@ -14,6 +14,7 @@ import 'package:shinobi_self/services/openai_service.dart';
 import 'package:shinobi_self/core/animations/animation_helpers.dart';
 import 'package:shinobi_self/features/home/components/mission_card.dart';
 import 'package:shinobi_self/features/home/components/animated_user_header.dart';
+import 'package:shinobi_self/services/audio_service.dart';
 
 // Provider for daily missions
 final dailyMissionsProvider = StateNotifierProvider<DailyMissionsNotifier, AsyncValue<List<Mission>>>((ref) {
@@ -588,6 +589,16 @@ class HomeDashboard extends ConsumerWidget {
   }
 
   void _processMissionCompletion(BuildContext context, WidgetRef ref, Mission mission, int bonusXp) {
+    // Get current user preferences to determine character path
+    final userPrefs = ref.read(userPrefsProvider);
+    final characterPath = userPrefs.characterPath;
+    
+    // Play completion sound effect based on character path
+    if (characterPath != null) {
+      final audioService = ref.read(audioServiceProvider);
+      audioService.playCompletionSound(characterPath);
+    }
+    
     // Update the mission to completed
     if (mission.frequency == MissionFrequency.daily) {
       // Get the current state of missions

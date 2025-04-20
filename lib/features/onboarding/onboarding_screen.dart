@@ -5,6 +5,8 @@ import 'package:shinobi_self/models/user_preferences.dart';
 import 'package:shinobi_self/core/theme/app_colors.dart';
 import 'package:shinobi_self/core/theme/app_text_styles.dart';
 import 'package:shinobi_self/features/quiz/quiz_screen.dart';
+import 'package:shinobi_self/services/audio_service.dart';
+import 'dart:io' show Platform;
 
 // Provider for storing the selected character path
 final selectedCharacterProvider = StateProvider<CharacterPath?>((ref) => null);
@@ -20,10 +22,39 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
   CharacterPath? _recommendedPath;
+  static const String bgMusicPath = 'assets/sounds/konoha_theme.mp3';
+
+  @override
+  void initState() {
+    super.initState();
+    _startBackgroundMusic();
+  }
+
+  Future<void> _startBackgroundMusic() async {
+    // Get the audio service and play the background music
+    final audioService = ref.read(audioServiceProvider);
+    print("DEBUG: Starting background music from: $bgMusicPath");
+    
+    // Check if we're on a supported platform
+    if (Platform.isAndroid || Platform.isIOS) {
+      try {
+        await audioService.playBackgroundMusic(bgMusicPath);
+        print("DEBUG: Background music started successfully");
+        
+        // Update the background music playing state
+        ref.read(backgroundMusicPlayingProvider.notifier).state = true;
+      } catch (e) {
+        print("DEBUG: Error starting background music: $e");
+      }
+    } else {
+      print("DEBUG: Skipping audio playback on unsupported platform: ${Platform.operatingSystem}");
+    }
+  }
 
   @override
   void dispose() {
     _pageController.dispose();
+    // We don't need to stop the music here as the AudioService is managed by its provider
     super.dispose();
   }
 
@@ -36,6 +67,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     } else {
       final selectedPath = ref.read(selectedCharacterProvider);
       if (selectedPath != null) {
+        // Stop music before navigating away
+        final audioService = ref.read(audioServiceProvider);
+        audioService.stopBackgroundMusic();
+        
         ref.read(userPrefsProvider.notifier).completeOnboarding(selectedPath);
         Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
       } else {

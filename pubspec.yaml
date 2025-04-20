@@ -36,6 +36,9 @@ dependencies:
   path_provider: ^2.1.1
   url_launcher: ^6.2.2
   
+  # Audio
+  just_audio: ^0.9.36
+  
   # Dependencies from HEAD (kept)
   image_picker: ^1.0.5
   http: ^1.1.0
@@ -61,9 +64,9 @@ flutter:
   assets:
     - assets/images/
     - assets/gifs/
-   # - assets/animations/
-   # - assets/icons/
-  #  - assets/sounds/
+    - assets/animations/
+    - assets/icons/
+    - assets/sounds/
 
   # fonts:
   #   - family: Schyler
