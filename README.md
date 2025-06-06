@@ -2,11 +2,9 @@
 
 ### 🏆 **1st Place HackAI Sponsor Track** 🏆
 
-A Naruto-themed mental wellness mobile app built with Flutter.
-
 ## Overview
 
-Shinobi Self is a gamified mental wellness app that uses Naruto-style character paths, daily quests, XP progression, mood tracking, and rewards to help users improve their mental wellbeing.
+Shinobi Self is a Naruto-themed gamified mental wellness app that uses Naruto-style character paths, daily quests, XP progression, mood tracking, and rewards to help users improve their mental wellbeing.
 
 ## Features
 
