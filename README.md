@@ -1,6 +1,6 @@
 # Shinobi Self: Train Like a Ninja, Grow Like a Hero
 
-1st Place HackAI Sponsor Track
+### 🏆 **1st Place HackAI Sponsor Track** 🏆
 
 A Naruto-themed mental wellness mobile app built with Flutter.
 
